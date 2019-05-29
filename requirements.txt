@@ -1,0 +1,10 @@
+deap
+tables
+numba
+pandas
+numpy
+scikit-learn
+scipy
+sklearn
+tqdm
+joblib
