@@ -12,28 +12,9 @@ from scipy import signal
 from src.earthquake.operators import Transform
 
 
-class Tran(Enum):
-    RAW = 100
-    DIFF = 101
-    DIFF2 = 102
-    ABS = 103
-    LOG = 104
-    SCALE = 105
-    FILT = 106
-    POW2 = 107
-    POW3 = 108
-    WELCH = 109
-    CENTR = 110
-    BW = 111
-    CONTR = 112
-    FLAT = 113
-    RLF = 114
-    ZRATE = 115
-
-
 class Peaks(Transform):
-    def __init__(self, name, index, q, distance):
-        super().__init__(name, index)
+    def __init__(self, name, q, distance):
+        super().__init__(name)
         self.q = q
         self.distance = distance
 
@@ -45,8 +26,8 @@ class Peaks(Transform):
 class Mfcc(Transform):
     """Mel-frequency cepstral coefficients (MFCCs)
     """
-    def __init__(self, name, index, cid):
-        super().__init__(name, index)
+    def __init__(self, name, cid):
+        super().__init__(name)
         self.cid = cid
 
     def apply(self, x):
@@ -56,7 +37,7 @@ class Mfcc(Transform):
 
 class SpectralCentroid(Transform):
     def __init__(self):
-        super().__init__(tran=Tran.CENTR)
+        super().__init__('CENTR')
 
     def apply(self, x):
         spec_c = librosa.feature.spectral_centroid(y=x.astype('float32'))
@@ -65,7 +46,7 @@ class SpectralCentroid(Transform):
 
 class SpectralBandwidth(Transform):
     def __init__(self):
-        super().__init__(tran=Tran.BW)
+        super().__init__('BW')
 
     def apply(self, x):
         spec_bw = librosa.feature.spectral_bandwidth(y=x.astype('float32'))
@@ -74,7 +55,7 @@ class SpectralBandwidth(Transform):
 
 class SpectralContrast(Transform):
     def __init__(self):
-        super().__init__(tran=Tran.CONTR)
+        super().__init__('CONTR')
 
     def apply(self, x):
         S = np.abs(librosa.stft(x.astype('float32')))
@@ -84,7 +65,7 @@ class SpectralContrast(Transform):
 
 class SpectralFlatness(Transform):
     def __init__(self):
-        super().__init__(tran=Tran.FLAT)
+        super().__init__('FLAT')
 
     def apply(self, x):
         flatness = librosa.feature.spectral_flatness(y=x.astype('float32'))
@@ -93,7 +74,7 @@ class SpectralFlatness(Transform):
 
 class SpectralRolloff(Transform):
     def __init__(self):
-        super().__init__(tran=Tran.RLF)
+        super().__init__('RLF')
 
     def apply(self, x):
         rolloff = librosa.feature.spectral_rolloff(y=x.astype('float32'))
@@ -102,7 +83,7 @@ class SpectralRolloff(Transform):
 
 class ZerCrossingRate(Transform):
     def __init__(self):
-        super().__init__(tran=Tran.ZRATE)
+        super().__init__('ZRATE')
 
     def apply(self, x):
         rate = librosa.feature.zero_crossing_rate(y=x.astype('float32'))
@@ -111,7 +92,7 @@ class ZerCrossingRate(Transform):
 
 class Raw(Transform):
     def __init__(self):
-        super().__init__(tran=Tran.RAW)
+        super().__init__('RAW')
 
     def apply(self, x):
         return x
@@ -119,7 +100,7 @@ class Raw(Transform):
 
 class Diff(Transform):
     def __init__(self):
-        super().__init__(tran=Tran.DIFF)
+        super().__init__('DIFF')
 
     def apply(self, x):
         return np.diff(x)
@@ -127,7 +108,7 @@ class Diff(Transform):
 
 class Diff2(Transform):
     def __init__(self):
-        super().__init__(tran=Tran.DIFF2)
+        super().__init__('DIFF2')
 
     def apply(self, x):
         return np.diff(x, n=2)
@@ -135,7 +116,7 @@ class Diff2(Transform):
 
 class Abs(Transform):
     def __init__(self):
-        super().__init__(tran=Tran.ABS)
+        super().__init__('ABS')
 
     def apply(self, x):
         return np.absolute(x)
@@ -143,7 +124,7 @@ class Abs(Transform):
 
 class Log(Transform):
     def __init__(self):
-        super().__init__(tran=Tran.LOG)
+        super().__init__('LOG')
 
     def apply(self, x):
         return np.log(x + abs(np.min(x)) + 1)
@@ -151,7 +132,7 @@ class Log(Transform):
 
 class Scale(Transform):
     def __init__(self):
-        super().__init__(tran=Tran.SCALE)
+        super().__init__('SCALE')
 
     def apply(self, x):
         return (x - np.mean(x)) / np.std(x)
@@ -159,7 +140,7 @@ class Scale(Transform):
 
 class Filter(Transform):
     def __init__(self):
-        super().__init__(tran=Tran.FILT)
+        super().__init__('FILT')
 
     def apply(self, x):
         return signal.medfilt(x, kernel_size=7)
@@ -167,7 +148,7 @@ class Filter(Transform):
 
 class Power2(Transform):
     def __init__(self):
-        super().__init__(tran=Tran.POW2)
+        super().__init__('POW2')
 
     def apply(self, x):
         return x ** 2
@@ -175,7 +156,7 @@ class Power2(Transform):
 
 class Power3(Transform):
     def __init__(self):
-        super().__init__(tran=Tran.POW3)
+        super().__init__('POW3')
 
     def apply(self, x):
         return x ** 3
@@ -183,7 +164,7 @@ class Power3(Transform):
 
 class Welch(Transform):
     def __init__(self):
-        super().__init__(tran=Tran.WELCH)
+        super().__init__('WELCH')
 
     def apply(self, x):
         _, pxx = signal.welch(x)

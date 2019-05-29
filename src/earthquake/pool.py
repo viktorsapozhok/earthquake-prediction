@@ -56,7 +56,7 @@ class Segment(object):
 def make_feature(path2hdf, signal_name, target_name, feature, n_rows, n_segments, is_target=False, desc='', n_jobs=1):
     feature = joblib.Parallel(n_jobs=n_jobs, verbose=False)(
         joblib.delayed(_make_feature)(
-            segment_id,
+            seg_id,
             path2hdf,
             signal_name,
             target_name,
@@ -64,14 +64,14 @@ def make_feature(path2hdf, signal_name, target_name, feature, n_rows, n_segments
             n_rows,
             is_target
         )
-        for segment_id in tqdm(range(n_segments), ncols=100, ascii=True, desc=desc)
+        for seg_id in tqdm(range(n_segments), ncols=100, ascii=True, desc=desc)
     )
 
     return feature
 
 
-def _make_feature(segment_id, path2hdf, signal_name, target_name, feature, n_rows, is_target):
-    start = segment_id * n_rows
+def _make_feature(seg_id, path2hdf, signal_name, target_name, feature, n_rows, is_target):
+    start = seg_id * n_rows
 
     with Segment(path2hdf, signal_name, target_name, start, n_rows) as segment:
         if is_target:
@@ -106,8 +106,8 @@ def make_pool(slices, transforms, aggregations, **kwargs):
             if os.path.isfile(path2csv):
                 data = pd.read_csv(path2csv)
 
-    if 'segment_id' not in data.columns:
-        data['segment_id'] = [i for i in range(n_segments)]
+    if 'seg_id' not in data.columns:
+        data['seg_id'] = [i for i in range(n_segments)]
 
     if 'target' not in data.columns:
         data['target'] = make_feature(
@@ -138,14 +138,10 @@ def make_pool(slices, transforms, aggregations, **kwargs):
         data.to_csv(path2csv, index=False, float_format='%.5f')
 
 
-def get_max_index(operators):
-    return max([operator.index for operator in operators])
-
-
 def init_slices():
     slices = [
-        Slice('all', 1),
-        Slice('last1000', 2, config.n_rows_all - 1000, config.n_rows_all)
+        Slice('all'),
+        Slice('last1000', config.n_rows_all - 1000, config.n_rows_all)
     ]
 
 #    for i, n_obs in enumerate(config.slice_counts):
@@ -185,10 +181,8 @@ def init_transforms():
         tr.SpectralCentroid(), tr.SpectralBandwidth(), tr.SpectralContrast(), tr.SpectralFlatness(),
         tr.SpectralRolloff(), tr.ZerCrossingRate()]
 
-    max_index = get_max_index(transforms)
-
     for i in range(20):
-        transforms += [tr.Mfcc('mfcc' + str(i), max_index + i + 1, i)]
+        transforms += [tr.Mfcc('mfcc' + str(i), i)]
 
     return transforms
 

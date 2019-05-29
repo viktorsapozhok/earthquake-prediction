@@ -13,6 +13,12 @@ path_to_hdf = os.path.join(root_dir, 'data', 'train.hdf')
 # path to created training set with all features
 path_to_train = os.path.join(root_dir, 'data', 'train.csv')
 
+# path to .hdf file with testing set
+path_to_test = os.path.join(root_dir, 'data', 'test_int16.hdf')
+
+# path to prediction results
+path_to_results = os.path.join(root_dir, 'data', 'results.csv')
+
 # signal column name
 signal_name = 'acoustic_data'
 
@@ -41,4 +47,4 @@ peak_quantiles = [0.95, 0.99, 0.999]
 peak_distance = 1000
 
 # amount of parallel jobs
-n_jobs = 8
+n_jobs = 4

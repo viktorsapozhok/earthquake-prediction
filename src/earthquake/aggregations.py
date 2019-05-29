@@ -11,26 +11,9 @@ from scipy import signal, stats
 from src.earthquake.operators import Aggregation
 
 
-class Aggr(Enum):
-    AVG = 0
-    STD = 1
-    MAX = 2
-    MAXMIN = 3
-    MIN = 4
-    MINMAX = 5
-    MED = 6
-    ARGMAX = 7
-    ARGMIN = 8
-    SKEW = 9
-    KURT = 10
-    WF = 11
-    WFAVG = 12
-    WDAVG = 13
-
-
 class Quantile(Aggregation):
-    def __init__(self, name, index, q):
-        super().__init__(name=name, index=index)
+    def __init__(self, name, q):
+        super().__init__(name)
         self.q = q
 
     def apply(self, x):
@@ -38,8 +21,8 @@ class Quantile(Aggregation):
 
 
 class NPeaks(Aggregation):
-    def __init__(self, name, index, q, distance):
-        super().__init__(name=name, index=index)
+    def __init__(self, name, q, distance):
+        super().__init__(name)
         self.q = q
         self.distance = distance
 
@@ -50,7 +33,7 @@ class NPeaks(Aggregation):
 
 class Average(Aggregation):
     def __init__(self):
-        super().__init__(aggr=Aggr.AVG)
+        super().__init__('AVG')
 
     def apply(self, x):
         return np.mean(x)
@@ -58,7 +41,7 @@ class Average(Aggregation):
 
 class StDev(Aggregation):
     def __init__(self):
-        super().__init__(aggr=Aggr.STD)
+        super().__init__('STD')
 
     def apply(self, x):
         return np.std(x)
@@ -66,7 +49,7 @@ class StDev(Aggregation):
 
 class Max(Aggregation):
     def __init__(self):
-        super().__init__(aggr=Aggr.MAX)
+        super().__init__('MAX')
 
     def apply(self, x):
         return np.max(x)
@@ -74,7 +57,7 @@ class Max(Aggregation):
 
 class MaxMin(Aggregation):
     def __init__(self):
-        super().__init__(aggr=Aggr.MAXMIN)
+        super().__init__('MAXMIN')
 
     def apply(self, x):
         return np.max(x) + np.min(x)
@@ -82,7 +65,7 @@ class MaxMin(Aggregation):
 
 class Min(Aggregation):
     def __init__(self):
-        super().__init__(aggr=Aggr.MIN)
+        super().__init__('MIN')
 
     def apply(self, x):
         return np.min(x)
@@ -90,7 +73,7 @@ class Min(Aggregation):
 
 class Median(Aggregation):
     def __init__(self):
-        super().__init__(aggr=Aggr.MED)
+        super().__init__('MED')
 
     def apply(self, x):
         return np.median(x)
@@ -98,7 +81,7 @@ class Median(Aggregation):
 
 class MinMax(Aggregation):
     def __init__(self):
-        super().__init__(aggr=Aggr.MINMAX)
+        super().__init__('MINMAX')
 
     def apply(self, x):
         return np.max(x) - np.min(x)
@@ -106,7 +89,7 @@ class MinMax(Aggregation):
 
 class Argmax(Aggregation):
     def __init__(self):
-        super().__init__(aggr=Aggr.ARGMAX)
+        super().__init__('ARGMAX')
 
     def apply(self, x):
         return np.argmax(x)
@@ -114,7 +97,7 @@ class Argmax(Aggregation):
 
 class Argmin(Aggregation):
     def __init__(self):
-        super().__init__(aggr=Aggr.ARGMIN)
+        super().__init__('ARGMIN')
 
     def apply(self, x):
         return np.argmin(x)
@@ -122,7 +105,7 @@ class Argmin(Aggregation):
 
 class Skew(Aggregation):
     def __init__(self):
-        super().__init__(aggr=Aggr.SKEW)
+        super().__init__('SKEW')
 
     def apply(self, x):
         return stats.skew(x)
@@ -130,7 +113,7 @@ class Skew(Aggregation):
 
 class Kurtosis(Aggregation):
     def __init__(self):
-        super().__init__(aggr=Aggr.KURT)
+        super().__init__('KURT')
 
     def apply(self, x):
         return stats.kurtosis(x)
@@ -138,7 +121,7 @@ class Kurtosis(Aggregation):
 
 class WelchFreq(Aggregation):
     def __init__(self):
-        super().__init__(aggr=Aggr.WF)
+        super().__init__('WF')
 
     def apply(self, x):
         f, pxx = signal.welch(x)
@@ -147,7 +130,7 @@ class WelchFreq(Aggregation):
 
 class WelchFreqAvg(Aggregation):
     def __init__(self):
-        super().__init__(aggr=Aggr.WFAVG)
+        super().__init__('WFAVG')
 
     def apply(self, x):
         f, pxx = signal.welch(x)
@@ -156,7 +139,7 @@ class WelchFreqAvg(Aggregation):
 
 class WelchDensityAvg(Aggregation):
     def __init__(self):
-        super().__init__(aggr=Aggr.WDAVG)
+        super().__init__('WDAVG')
 
     def apply(self, x):
         f, pxx = signal.welch(x)

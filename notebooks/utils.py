@@ -110,11 +110,12 @@ def tune_catboost(X, y, **kwargs):
     depth = kwargs.get('tree_depth', [4])
     random_strength = kwargs.get('random_strength', [1])
     learning_rate = kwargs.get('learning_rate', [0.03])
+    loss_function = kwargs.get('loss_function', ['RMSE'])
     l2_leaf_reg = kwargs.get('l2_leaf_reg', [3])
     bagging_temperature = kwargs.get('bagging_temperature', [1])
 
-    logger.info('%4s | %5s | %4s | %4s | %4s | %4s | %7s' %
-                ('iter', 'depth', 'rand', 'rate', 'L2', 'temp', 'MAE'))
+    logger.info('%4s | %5s | %4s | %4s | %4s | %4s | %5s | %7s' %
+                ('iter', 'depth', 'rand', 'rate', 'L2', 'temp', 'LF', 'MAE'))
 
     tscv = TimeSeriesSplit(n_splits=n_splits)
 
@@ -122,21 +123,23 @@ def tune_catboost(X, y, **kwargs):
         for d in depth:
             for rs in random_strength:
                 for r in learning_rate:
-                    for l2 in l2_leaf_reg:
-                        for bt in bagging_temperature:
-                            model = CatBoostRegressor(
-                                iterations=iter,
-                                depth=d,
-                                random_strength=rs,
-                                learning_rate=r,
-                                l2_leaf_reg=l2,
-                                bagging_temperature=bt,
-                                verbose=False)
+                    for lf in loss_function:
+                        for l2 in l2_leaf_reg:
+                            for bt in bagging_temperature:
+                                model = CatBoostRegressor(
+                                    iterations=iter,
+                                    depth=d,
+                                    random_strength=rs,
+                                    learning_rate=r,
+                                    l2_leaf_reg=l2,
+                                    loss_function=lf,
+                                    bagging_temperature=bt,
+                                    verbose=False)
 
-                            mae = cross_val_score(model, X, y, cv=n_splits, scoring='neg_mean_absolute_error')
+                                mae = cross_val_score(model, X, y, cv=n_splits, scoring='neg_mean_absolute_error')
 
-                            logger.info('%4.0f | %5.0f | %4.1f | %4.2f | %4.1f | %4.1f | %7.2f' %
-                                        (iter, d, rs, r, l2, bt, abs(mae.mean())))
+                                logger.info('%4.0f | %5.0f | %4.1f | %4.2f | %4.1f | %4.1f | %5s | %7.2f' %
+                                            (iter, d, rs, r, l2, bt, lf, abs(mae.mean())))
 
                             
 def catboost_best_iter(model, logger, train_x, train_y, eval_x, eval_y):

@@ -16,9 +16,8 @@ class OperatorType(Enum):
 
 
 class Operator(abc.ABC):
-    def __init__(self, name, index, operator_type):
+    def __init__(self, name, operator_type):
         self.name = name
-        self.index = index
         self.operator_type = operator_type
 
     def __repr__(self):
@@ -26,9 +25,6 @@ class Operator(abc.ABC):
 
     def get_name(self):
         return self.name
-
-    def get_index(self):
-        return self.index
 
     def is_slice(self):
         return self.operator_type == OperatorType.SLICE
@@ -49,11 +45,8 @@ class Operator(abc.ABC):
 
 
 class Aggregation(Operator):
-    def __init__(self, name=None, index=None, aggr=None):
-        if name is None:
-            super().__init__(aggr.name, aggr.value, OperatorType.AGGREGATION)
-        else:
-            super().__init__(name, index, OperatorType.AGGREGATION)
+    def __init__(self, name):
+        super().__init__(name, OperatorType.AGGREGATION)
 
     @abc.abstractmethod
     def apply(self, x):
@@ -67,11 +60,8 @@ class Aggregation(Operator):
 
 
 class Transform(Operator):
-    def __init__(self, name=None, index=None, tran=None):
-        if name is None:
-            super().__init__(tran.name, tran.value, OperatorType.TRANSFORM)
-        else:
-            super().__init__(name, index, OperatorType.TRANSFORM)
+    def __init__(self, name):
+        super().__init__(name, OperatorType.TRANSFORM)
 
     @abc.abstractmethod
     def apply(self, x):
@@ -85,8 +75,8 @@ class Transform(Operator):
 
 
 class Slice(Operator):
-    def __init__(self, name, index, start=None, end=None):
-        super().__init__(name, index, OperatorType.SLICE)
+    def __init__(self, name, start=None, end=None):
+        super().__init__(name, OperatorType.SLICE)
         self.start = None if start is None else int(start)
         self.end = None if end is None else int(end)
 
