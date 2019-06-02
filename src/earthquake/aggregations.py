@@ -3,10 +3,9 @@
 """Collection of aggregations
 """
 
-from enum import Enum
-
 import numpy as np
 from scipy import signal, stats
+from tsfresh.feature_extraction import feature_calculators
 
 from src.earthquake.operators import Aggregation
 
@@ -144,3 +143,28 @@ class WelchDensityAvg(Aggregation):
     def apply(self, x):
         f, pxx = signal.welch(x)
         return np.average(pxx, weights=f)
+
+
+class Slope(Aggregation):
+    def __init__(self):
+        super().__init__('SLOPE')
+
+    def apply(self, x):
+        slope, _, _, _, _ = stats.linregress(np.asarray(range(len(x))), x)
+        return slope
+
+
+class Autocorr(Aggregation):
+    def __init__(self):
+        super().__init__('AUTOCORR')
+
+    def apply(self, x):
+        return feature_calculators.autocorrelation(x.astype('float32'), 5)
+
+
+class NumPeaks(Aggregation):
+    def __init__(self):
+        super().__init__('NUMPEAKS')
+
+    def apply(self, x):
+        return feature_calculators.number_peaks(x.astype('float32'), 10)

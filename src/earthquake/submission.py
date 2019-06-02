@@ -8,7 +8,7 @@ import pandas as pd
 
 from tqdm import tqdm
 
-from catboost import CatBoostRegressor
+from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 
 from src.earthquake.operators import Slice
 import src.earthquake.aggregations as aggr
@@ -19,22 +19,21 @@ import config
 
 def init_features():
     s_all = Slice('all')
-    s_last = Slice('last1000', config.n_rows_all - 1000, config.n_rows_all)
-    mfcc_0 = tr.Mfcc('mfcc0', 0)
-    mfcc_2 = tr.Mfcc('mfcc2', 2)
     mfcc_4 = tr.Mfcc('mfcc4', 4)
     mfcc_5 = tr.Mfcc('mfcc5', 5)
     mfcc_15 = tr.Mfcc('mfcc15', 15)
-    centr = tr.SpectralCentroid()
-    zrate = tr.ZerCrossingRate()
+    rollstd10 = tr.RollStd('rollstd10', 10)
+    rollstd100 = tr.RollStd('rollstd100', 100)
+    rollstd1000 = tr.RollStd('rollstd1000', 1000)
     avg = aggr.Average()
+    q5 = aggr.Quantile('q5', 0.05)
 
     features = [
-        [s_last, mfcc_15, avg], [s_all, mfcc_15, avg], [s_last, mfcc_0, avg],
-        [s_all, centr, avg], [s_last, mfcc_2, avg], [s_all, mfcc_2, avg],
-        [s_last, mfcc_5, avg], [s_all, mfcc_0, avg], [s_all, mfcc_5, avg],
-        [s_last, mfcc_4, avg], [s_all, mfcc_4, avg], [s_last, centr, avg],
-        [s_last, zrate, avg]]
+        [s_all, mfcc_4, avg], [s_all, mfcc_5, avg], [s_all, mfcc_15, avg],
+        [s_all, mfcc_4, q5], [s_all, mfcc_5, q5], [s_all, mfcc_15, q5],
+        [s_all, rollstd10, q5], [s_all, rollstd100, q5], [s_all, rollstd1000, q5],
+        [s_all, rollstd10, avg], [s_all, rollstd100, avg], [s_all, rollstd1000, avg]
+    ]
 
     return features
 
@@ -78,14 +77,19 @@ def submit():
     features = init_features()
     feature_names = [get_feature_name(feature) for feature in features]
     test_set = make_test_set(config.path_to_test, features, config.signal_name, n_jobs=config.n_jobs)
+    test_set.to_csv(config.path_to_test_set, index=False, float_format='%.5f')
 
     data = pd.read_csv(config.path_to_train)
-    train_x = data[feature_names]
-    train_y = data['target']
 
-    model = CatBoostRegressor(iterations=80, random_seed=0, depth=4, random_strength=0.5,
-                              loss_function='RMSE', verbose=False)
-    model.fit(train_x, train_y)
+    data['target_int'] = data['target'].round().astype(int)
+    model = RandomForestClassifier(n_estimators=100, max_features=1, min_samples_leaf=10)
+    model.fit(data[feature_names], data['target_int'])
+    data['y_hat_int'] = model.predict(data[feature_names])
+
+    model = RandomForestRegressor(n_estimators=100)
+
+    train = data.query('abs(target_int - y_hat_int) < 6').reset_index()
+    model.fit(train[feature_names], train['target'])
 
     results = pd.DataFrame()
     results['seg_id'] = test_set['seg_id']

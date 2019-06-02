@@ -126,15 +126,16 @@ def tune_catboost(X, y, **kwargs):
                     for lf in loss_function:
                         for l2 in l2_leaf_reg:
                             for bt in bagging_temperature:
-                                model = CatBoostRegressor(
-                                    iterations=iter,
-                                    depth=d,
-                                    random_strength=rs,
-                                    learning_rate=r,
-                                    l2_leaf_reg=l2,
-                                    loss_function=lf,
-                                    bagging_temperature=bt,
-                                    verbose=False)
+#                                model = CatBoostRegressor(
+#                                    iterations=iter,
+#                                    depth=d,
+#                                    random_strength=rs,
+#                                    learning_rate=r,
+#                                    l2_leaf_reg=l2,
+#                                    loss_function=lf,
+#                                    bagging_temperature=bt,
+#                                    verbose=False)
+                                model = CatBoostRegressor(verbose=False)
 
                                 mae = cross_val_score(model, X, y, cv=n_splits, scoring='neg_mean_absolute_error')
 

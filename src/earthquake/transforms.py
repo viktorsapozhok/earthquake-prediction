@@ -3,11 +3,11 @@
 """Collection of transforms
 """
 
-from enum import Enum
-
 import numpy as np
 import librosa
+import pandas as pd
 from scipy import signal
+from pymssa import MSSA
 
 from src.earthquake.operators import Transform
 
@@ -23,6 +23,33 @@ class Peaks(Transform):
         return peaks
 
 
+class SSA(Transform):
+    """Singular Spectrum Analysis (SSA decomposition)
+    """
+    def __init__(self, name, cid):
+        super().__init__(name)
+        self.cid = cid
+
+    def apply(self, x):
+        x = x.astype('float32')
+        x -= np.mean(x)
+        mssa = MSSA(n_components=11, window_size=64, verbose=False)
+        mssa.fit(x)
+        return mssa.components_[0, :, self.cid]
+
+
+class Savgol(Transform):
+    """Savitsky-Golay filter
+    """
+    def __init__(self, name, win_len, polyorder):
+        super().__init__(name)
+        self.win_len = win_len
+        self.polyorder = polyorder
+
+    def apply(self, x):
+        return signal.savgol_filter(x, self.win_len, self.polyorder)
+
+
 class Mfcc(Transform):
     """Mel-frequency cepstral coefficients (MFCCs)
     """
@@ -33,6 +60,54 @@ class Mfcc(Transform):
     def apply(self, x):
         mfcc = librosa.feature.mfcc(y=x.astype('float32'))
         return np.abs(mfcc[self.cid])
+
+
+class OnsetStrength(Transform):
+    def __init__(self):
+        super().__init__('Onset')
+
+    def apply(self, x):
+        return librosa.onset.onset_strength(x.astype('float32'))
+
+
+class Tempo(Transform):
+    def __init__(self):
+        super().__init__('Tempo')
+
+    def apply(self, x):
+        oenv = librosa.onset.onset_strength(x.astype('float32'))
+        tempogram = librosa.feature.tempogram(onset_envelope=oenv, win_length=150)
+        return tempogram[1]
+
+
+class Amplitude(Transform):
+    def __init__(self):
+        super().__init__('Amp')
+
+    def apply(self, x):
+        amp = abs(librosa.stft(x.astype('float32')))
+        return amp[0]
+
+
+class Rms(Transform):
+    def __init__(self):
+        super().__init__('Rms')
+
+    def apply(self, x):
+        S, _ = librosa.magphase(librosa.stft(x.astype('float32')))
+        rms = librosa.feature.rms(S=S)
+        return rms[0]
+
+
+class Decompose(Transform):
+    def __init__(self, name, cid):
+        super().__init__(name)
+        self.cid = cid
+
+    def apply(self, x):
+        S = np.abs(librosa.stft(x.astype('float32')))
+        _, acts = librosa.decompose.decompose(S, n_components=8, tol=0.1)
+        return acts[self.cid]
 
 
 class SpectralCentroid(Transform):
@@ -169,4 +244,39 @@ class Welch(Transform):
     def apply(self, x):
         _, pxx = signal.welch(x)
         return pxx
+
+
+class RollStd(Transform):
+    def __init__(self, name, window):
+        super().__init__(name)
+        self.window = window
+
+    def apply(self, x):
+        s = pd.Series(x).rolling(self.window).std().dropna().values
+        return s
+
+
+class RollAvg(Transform):
+    def __init__(self, name, window):
+        super().__init__(name)
+        self.window = window
+
+    def apply(self, x):
+        s = pd.Series(x).rolling(self.window).mean().dropna().values
+        return s
+
+
+class Butter(Transform):
+    def __init__(self):
+        super().__init__('BUTTER')
+
+    def apply(self, x):
+        order = 5
+        fs = 7000
+        nyq = 0.5 * fs
+        low = 500 / nyq
+        high = 1250 / nyq
+        b, a = signal.butter(order, [low, high], btype='band')
+        return signal.lfilter(b, a, x.astype('float32'))
+
 

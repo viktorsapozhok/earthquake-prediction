@@ -71,7 +71,7 @@ def make_feature(path2hdf, signal_name, target_name, feature, n_rows, n_segments
 
 
 def _make_feature(seg_id, path2hdf, signal_name, target_name, feature, n_rows, is_target):
-    start = seg_id * n_rows
+    start = seg_id * (n_rows // 2)
 
     with Segment(path2hdf, signal_name, target_name, start, n_rows) as segment:
         if is_target:
@@ -86,6 +86,10 @@ def _make_feature(seg_id, path2hdf, signal_name, target_name, feature, n_rows, i
 
         del segment
     return x
+
+
+def get_feature_name(feature):
+    return '_'.join([operator.get_name().lower() for operator in feature])
 
 
 def make_pool(slices, transforms, aggregations, **kwargs):
@@ -119,9 +123,12 @@ def make_pool(slices, transforms, aggregations, **kwargs):
     for s in slices:
         for t in transforms:
             for a in aggregations:
-                feature = [s, t, a]
-                feature_name = '%s_%s_%s' % (s.get_name(), t.get_name(), a.get_name())
-                feature_name = feature_name.lower()
+                if isinstance(t, list):
+                    feature = [s] + t + [a]
+                else:
+                    feature = [s, t, a]
+
+                feature_name = get_feature_name(feature)
 
                 if feature_name not in data.columns:
                     data[feature_name] = make_feature(
@@ -140,8 +147,7 @@ def make_pool(slices, transforms, aggregations, **kwargs):
 
 def init_slices():
     slices = [
-        Slice('all'),
-        Slice('last1000', config.n_rows_all - 1000, config.n_rows_all)
+        Slice('all')
     ]
 
 #    for i, n_obs in enumerate(config.slice_counts):
@@ -170,19 +176,27 @@ def init_aggregations():
 #            aggr.NPeaks('npeaks' + str(q)[2:], max_index + i + 1, q, distance=config.peak_distance)]
 
     aggregations = [
-        aggr.Average()
+        aggr.NumPeaks()
     ]
 
     return aggregations
 
 
 def init_transforms():
+#    transforms = [
+#        tr.SpectralCentroid(), tr.SpectralBandwidth(), tr.SpectralContrast(), tr.SpectralFlatness(),
+#        tr.SpectralRolloff(), tr.ZerCrossingRate()]
     transforms = [
-        tr.SpectralCentroid(), tr.SpectralBandwidth(), tr.SpectralContrast(), tr.SpectralFlatness(),
-        tr.SpectralRolloff(), tr.ZerCrossingRate()]
+        tr.Raw()
+    ]
 
-    for i in range(20):
-        transforms += [tr.Mfcc('mfcc' + str(i), i)]
+#    transforms = []
+
+#    for i in range(11):
+#        transforms += [[tr.SSA('mssa' + str(i), i), tr.Mfcc('mfcc15', 15)]]
+
+#    for i in range(20):
+#        transforms += [tr.Mfcc('mfcc' + str(i), i)]
 
     return transforms
 
@@ -200,8 +214,8 @@ def main():
               n_segments=config.n_segments,
               n_rows_seg=config.n_rows_seg,
               n_jobs=config.n_jobs,
-              append=False,
-              n_feat_to_csv=10)
+              append=True,
+              n_feat_to_csv=1)
 
 
 if __name__ == '__main__':
