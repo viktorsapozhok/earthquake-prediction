@@ -5,6 +5,7 @@
 
 import numpy as np
 import pandas as pd
+import librosa
 
 from tqdm import tqdm
 
@@ -24,23 +25,36 @@ import config
 
 
 class FeatureGenerator(object):
-    def __init__(self, path_to_store, signal_name, target_name, n_rows, n_jobs=1, chunk_size=None):
+    def __init__(self, path_to_store, dtype='train', n_rows=None, n_jobs=1, chunk_size=None):
         self.path_to_store = path_to_store
-        self.signal_name = signal_name
-        self.target_name = target_name
+        self.dtype = dtype
+        self.signal_name = 'acoustic_data'
+        self.target_name = 'time_to_failure'
         self.n_rows = n_rows
         self.n_jobs = n_jobs
         self.chunk_size = chunk_size
-        self.total = int(self.n_rows / self.chunk_size)
+
+        if dtype == 'train':
+            self.total = int(self.n_rows / self.chunk_size)
+        else:
+            self.store = pd.HDFStore(self.path_to_store, mode='r')
+            self.keys = self.store.keys()
+            self.total = len(self.keys)
 
     def read_chunks(self):
-        for i in range(self.total):
-            df = pd.read_hdf(self.path_to_store, start=i * self.chunk_size, stop=(i + 1) * self.chunk_size)
-            x = df[self.signal_name].values
-            y = df[self.target_name].values[-1]
-            seg_id = 'train_' + str(i)
-            del df
-            yield seg_id, x, y
+        if self.dtype == 'train':
+            for i in range(self.total):
+                df = pd.read_hdf(self.path_to_store, start=i * self.chunk_size, stop=(i + 1) * self.chunk_size)
+                x = df[self.signal_name].values
+                y = df[self.target_name].values[-1]
+                seg_id = 'train_' + str(i)
+                del df
+                yield seg_id, x, y
+        else:
+            for key in self.keys:
+                seg_id = key[1:]
+                x = self.store[key][self.signal_name].values
+                yield seg_id, x, -999
 
     def get_features(self, x, y, seg_id):
         x = pd.Series(x)
@@ -69,15 +83,22 @@ class FeatureGenerator(object):
         feature_dict['seg_id'] = seg_id
 
         # lists with parameters to iterate over them
-        percentiles = [1, 5, 10, 20, 25, 30, 40, 50, 60, 70, 75, 80, 90, 95, 99]
-        hann_windows = [50, 150, 1500, 15000]
-        spans = [300, 3000, 30000, 50000]
-        windows = [10, 50, 100, 500, 1000, 10000]
-        borders = list(range(-4000, 4001, 1000))
-        peaks = [10, 20, 50, 100]
-        coefs = [1, 5, 10, 50, 100]
-        lags = [10, 100, 1000, 10000]
-        autocorr_lags = [5, 10, 50, 100, 500, 1000, 5000, 10000]
+#        percentiles = [1, 5, 10, 20, 25, 30, 40, 50, 60, 70, 75, 80, 90, 95, 99]
+        percentiles = [1, 5, 20, 30, 40, 80]
+#        hann_windows = [50, 150, 1500, 15000]
+        hann_windows = [1500]
+#        spans = [300, 3000, 30000, 50000]
+        spans = [30000]
+#        windows = [10, 50, 100, 500, 1000, 10000]
+        windows = [50, 100, 1000, 10000]
+#        borders = list(range(-4000, 4001, 1000))
+        borders = [1000]
+#        peaks = [10, 20, 50, 100]
+        peaks = [100]
+#        coefs = [1, 5, 10, 50, 100]
+        coefs = [100]
+#        autocorr_lags = [5, 10, 50, 100, 500, 1000, 5000, 10000]
+        autocorr_lags = [5]
 
         # basic stats
         feature_dict['mean'] = x.mean()
@@ -223,24 +244,45 @@ class FeatureGenerator(object):
                 np.nonzero((np.diff(x_roll_mean) / x_roll_mean[:-1]))[0])
             feature_dict[f'abs_max_roll_mean_{w}'] = np.abs(x_roll_mean).max()
 
+        # Mel-frequency cepstral coefficients (MFCCs)
+        x = x.values.astype('float32')
+        mfcc = librosa.feature.mfcc(y=x)
+        for i in range(len(mfcc)):
+            feature_dict[f'mfcc_{i}_avg'] = np.mean(np.abs(mfcc[i]))
+
+        # spectral features
+        feature_dict['spectral_centroid'] = np.mean(np.abs(librosa.feature.spectral_centroid(y=x)[0]))
+        feature_dict['zero_crossing_rate'] = np.mean(np.abs(librosa.feature.zero_crossing_rate(y=x)[0]))
+        feature_dict['spectral_flatness'] = np.mean(np.abs(librosa.feature.spectral_flatness(y=x)[0]))
+        feature_dict['spectral_contrast'] = np.mean(np.abs(librosa.feature.spectral_contrast(S=np.abs(librosa.stft(x)))[0]))
+        feature_dict['spectral_bandwidth'] = np.mean(np.abs(librosa.feature.spectral_bandwidth(y=x)[0]))
+
         return feature_dict
 
     def generate(self):
         feature_list = []
-        res = Parallel(n_jobs=self.n_jobs,
-                       backend='threading')(delayed(self.get_features)(x, y, s)
-                                            for s, x, y in tqdm(self.read_chunks(), total=self.total, ascii=True))
+        res = Parallel(n_jobs=self.n_jobs, backend='threading')(
+            delayed(self.get_features)(x, y, s)
+            for s, x, y in tqdm(self.read_chunks(),
+                                total=self.total,
+                                ncols=100,
+                                desc='generating features',
+                                ascii=True))
         for r in res:
             feature_list.append(r)
+
         return pd.DataFrame(feature_list)
 
     @staticmethod
     def add_trend_feature(arr, abs_values=False):
         idx = np.array(range(len(arr)))
+
         if abs_values:
             arr = np.abs(arr)
+
         lr = LinearRegression()
         lr.fit(idx.reshape(-1, 1), arr)
+
         return lr.coef_[0]
 
     @staticmethod
@@ -280,13 +322,19 @@ class FeatureGenerator(object):
 
 
 if __name__ == '__main__':
+#    fg = FeatureGenerator(
+#        config.path_to_hdf,
+#        dtype='train',
+#        n_rows=config.n_rows_all,
+#        n_jobs=config.n_jobs,
+#        chunk_size=config.n_rows_seg)
+
     fg = FeatureGenerator(
-        config.path_to_hdf,
-        config.signal_name,
-        config.target_name,
+        config.path_to_test,
+        dtype='test',
         n_rows=config.n_rows_all,
         n_jobs=config.n_jobs,
         chunk_size=config.n_rows_seg)
 
     training_data = fg.generate()
-    training_data.to_csv(config.path_to_train, index=False, float_format='%.5f')
+    training_data.to_csv(config.path_to_test_set, index=False, float_format='%.5f')

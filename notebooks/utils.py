@@ -88,7 +88,8 @@ def tune_random_forest(X, y, logger, **kwargs):
                     n_estimators=n_est,
                     max_features=max_feat,
                     min_samples_leaf=ls,
-                    criterion=criterion)
+                    criterion=criterion,
+                    random_state=0)
 
 #                mae = cross_val_score(model, X, y, cv=tscv, scoring='neg_mean_absolute_error')
 #                mse = cross_val_score(model, X, y, cv=tscv, scoring='neg_mean_squared_error')
@@ -97,10 +98,10 @@ def tune_random_forest(X, y, logger, **kwargs):
 
                 if max_feat == 'auto':
 #                    logger.info('%7.0f | %7s | %7.0f | %7.2f | %7.2f' % (n_est, 'auto', ls, -mse.mean(), -mae.mean()))
-                    logger.info('%7.0f | %7s | %7.0f | %7.2f | %7.2f' % (n_est, 'auto', ls, 0, -mae.mean()))
+                    logger.info('%7.0f | %7s | %7.0f | %7.2f | %7.3f' % (n_est, 'auto', ls, 0, -mae.mean()))
                 else:
 #                    logger.info('%7.0f | %7.0f | %7.0f | %7.2f | %7.2f' % (n_est, max_feat, ls, -mse.mean(), -mae.mean()))
-                    logger.info('%7.0f | %7.0f | %7.0f | %7.2f | %7.2f | ' % (n_est, max_feat, ls, 0, -mae.mean()))
+                    logger.info('%7.0f | %7.0f | %7.0f | %7.2f | %7.3f | ' % (n_est, max_feat, ls, 0, -mae.mean()))
                     logger.info('scores: {}'.format(abs(mae)))
 
 

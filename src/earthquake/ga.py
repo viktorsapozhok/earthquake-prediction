@@ -1,289 +1,136 @@
 # -*- coding: utf-8 -*-
 
-"""Feature engineering using genetic algorithm
+"""Feature selection based on genetic algorithm
 """
 
-import os
 import random
 import logging
-from copy import deepcopy
 
 import numpy as np
 import pandas as pd
 
 from deap import creator, base, tools, algorithms
 from sklearn.ensemble import RandomForestRegressor
-from catboost import CatBoostRegressor, Pool
+from sklearn.model_selection import cross_val_score, TimeSeriesSplit, KFold
 
-from src.earthquake import operators
+import config
 
 logging.basicConfig(format='%(asctime)s | %(name)s | %(message)s',
                     level=logging.INFO, datefmt='%Y-%m-%d %H:%M:%S')
 logger = logging.getLogger('ga')
 
-ROOT_DIR = os.path.dirname(os.path.abspath(os.path.join(__file__, '../..')))
-PATH_TO_TRAIN = os.path.join(ROOT_DIR, 'data', 'train_int16float32.hdf')
-TRAIN_SIZE = 629145480
-SEGMENT_SIZE = 150000
-LARGE_MAE = 3.999
-
 
 class Chromosome(object):
-    def __init__(self, slices=None, transforms=None, aggregations=None, n_transforms_max=0):
-        self.genes = self.generate(slices, transforms, aggregations, n_transforms_max)
+    def __init__(self, genes, size):
+        self.genes = self.generate(genes, size)
 
     def __repr__(self):
-        return ' '.join([gene.get_name() for gene in self.genes])
+        return ' '.join(self.genes)
 
-    def set(self, genes):
-        self.genes = genes
-
-    def get_genes(self):
+    def __get__(self, instance, owner):
         return self.genes
 
-    def get_gene(self, index):
-        return self.genes[index]
+    def __set__(self, instance, value):
+        self.genes = value
 
-    def get_aggregation_gene(self):
-        return self.genes[-1]
+    def __getitem__(self, item):
+        return self.genes[item]
 
-    def set_gene(self, index, gene):
-        self.genes[index] = gene
+    def __setitem__(self, key, value):
+        self.genes[key] = value
 
-    def add_gene(self, index, gene):
-        self.genes.insert(index, gene)
-
-    def set_aggregation_gene(self, gene):
-        self.genes[-1] = gene
+    def __len__(self):
+        return len(self.genes)
 
     @staticmethod
-    def generate(slices, transforms, aggregations, n_transforms_max):
-        genes = []
-
-        if transforms is None:
-            return genes
-
-        # generate first gene which must be the slice
-        genes += [random.choice(slices)]
-
-        # generate number of transformation genes
-        n_transform_genes = random.randint(0, n_transforms_max)
-        _transforms = transforms.copy()
-
-        for i in range(n_transform_genes):
-            # generate the index of new transformation gene
-            j = random.randint(0, len(_transforms) - 1)
-
-            # add new gene to individual
-            genes += [_transforms[j]]
-
-            # delete transformation from list if it cannot be used
-            # multiple times (f.ex. detrend)
-            if not _transforms[j].is_multiple():
-                del _transforms[j]
-
-            # exit loop if list is empty
-            if len(_transforms) == 0:
-                break
-
-        # generate last gene which must be the aggregation
-        genes += [random.choice(aggregations)]
-
-        return genes
+    def generate(genes, size):
+        return random.sample(genes, size)
 
 
-def init_individual(ind_class, slices=None, transforms=None, aggregations=None, n_transforms_max=5):
-    ind = ind_class(slices=slices, transforms=transforms,
-                    aggregations=aggregations, n_transforms_max=n_transforms_max)
-    return ind
+def init_individual(ind_class, genes=None, size=None):
+    return ind_class(genes, size)
 
 
-def create_set(individuals, seg_size, n_segments):
-    x = []
-    y = []
-
-    gap_size = int((TRAIN_SIZE - (seg_size * n_segments)) / (n_segments - 1))
-    start = 0
-
-    for i in range(n_segments):
-        # get segment from dataset
-        #        with Segment(start=None, seg_size=seg_size) as segment:
-        with Segment(start=start, seg_size=seg_size) as segment:
-            signals = []
-
-            # consecutively apply operators to signal
-            for ind in individuals:
-                signal = segment[0]
-
-                for gene in ind.get_genes():
-                    signal = gene.apply_soft(signal)
-
-                signals += [signal]
-
-            x += [signals] if len(individuals) > 1 else signals
-            y += [segment[1]]
-
-            del segment
-
-        # increment start position
-        start += seg_size + random.randint(1, gap_size)
-
-    return x, y
-
-
-def evaluate(individual, best=None, model=None, n_train_obs=None, n_test_obs=None, seg_size=None):
-    logger.info('%5s << %s' % ('', individual))
-    segmentation_size = (n_train_obs + n_test_obs) * seg_size
-
-    # select random start position of the segmentation
-    start = random.randint(0, TRAIN_SIZE - segmentation_size - 1)
-
-    if len(best) == 0:
-        individuals = [individual]
-    else:
-        individuals = [individual] + [ind for ind in best]
-
-    # make train and test set
-    x, y = create_set(individuals, seg_size, n_train_obs + n_test_obs)
-    train_idx = random.sample(range(len(y)), n_train_obs)
-    test_idx = [i for i in range(len(y)) if i not in train_idx]
-
-    train_x = np.asarray([x[i] for i in train_idx])
-    train_y = np.asarray([y[i] for i in train_idx])
-    test_x = np.asarray([x[i] for i in test_idx])
-    test_y = np.asarray([y[i] for i in test_idx])
-
-    if len(best) == 0:
-        train_x = np.reshape(np.repeat(train_x, 2), (-1, 2))
-        test_x = np.reshape(np.repeat(test_x, 2), (-1, 2))
-
-    # train the model
-    try:
-        model.fit(train_x, train_y)
-        # make a prediction
-        y_hat = model.predict(test_x)
-        # calculate mean average error
-        mae = np.mean(np.abs(test_y - y_hat))
-        assert mae >= 0
-    except (ValueError, AssertionError):
-        mae = LARGE_MAE
-
+def evaluate(individual, model=None, train=None, n_splits=5, n_jobs=1):
+    x = train[individual.genes]
+    y = train['target']
+    mae_folds = cross_val_score(model, x, y, cv=n_splits, scoring='neg_mean_absolute_error', n_jobs=n_jobs)
+    mae = abs(mae_folds.mean())
     logger.info('%5.3f << %s' % (mae, individual))
-
+    logger.info('')
     return mae,
 
 
-def crossover(ind1, ind2):
-    # amount of genes of both individuals
-    n_genes_1 = len(ind1.get_genes())
-    n_genes_2 = len(ind2.get_genes())
+def mutate(individual, genes=None, pb=0):
+    # set the maximal amount of mutated genes
+    n_mutated_max = max(1, int(len(individual) * pb))
 
-    # indexes of crossed genes
-    index_1 = random.randint(0, n_genes_1 - 1)
+    # generate the random amount of mutated genes
+    n_mutated = random.randint(1, n_mutated_max)
 
-    if index_1 == 0:
-        crossed_gene = deepcopy(ind1.get_gene(0))
-        ind1.set_gene(0, ind2.get_gene(0))
-        ind2.set_gene(0, crossed_gene)
+    # randomly pick up genes which need to be mutated
+    mutated_indexes = random.sample([index for index in range(len(individual.genes))], n_mutated)
 
-        return ind1, ind2
-
-    # if one of the crossed genes is the aggregation gene then cross it
-    # with the aggregation gene of the second individual
-    if (index_1 == (n_genes_1 - 1)) or (n_genes_2 == 2):
-        crossed_gene = deepcopy(ind1.get_aggregation_gene())
-        ind1.set_aggregation_gene(ind2.get_aggregation_gene())
-        ind2.set_aggregation_gene(crossed_gene)
-
-        return ind1, ind2
-
-    # cross transformation genes
-    index_2 = random.randint(1, n_genes_2 - 2)
-    crossed_gene = deepcopy(ind1.get_gene(index_1))
-    ind1.set_gene(index_1, ind2.get_gene(index_2))
-    ind2.set_gene(index_2, crossed_gene)
-
-    return ind1, ind2
-
-
-def mutate(individual, slices=None, transforms=None, aggregations=None, pb=0):
-    if random.random() < pb:
-        index = random.randint(1, len(individual.get_genes()) - 1)
-        individual.add_gene(index, random.choice(transforms))
-
-    for i, gene in enumerate(individual.get_genes()):
-        if random.random() < pb:
-            if gene.is_slice():
-                _slices = [s for s in slices if s.get_index() != gene.get_index()]
-                individual.set_gene(i, random.choice(_slices))
-            elif gene.is_aggregation():
-                # remove gene's aggregation from the list
-                _aggregations = [a for a in aggregations if a.get_index() != gene.get_index()]
-                # mutate gene
-                individual.set_aggregation_gene(random.choice(_aggregations))
-            else:
-                # remove gene's transform from the list
-                _transforms = [t for t in transforms if t.get_index() != gene.get_index()]
-                # mutate gene
-                individual.set_gene(i, random.choice(_transforms))
+    # mutate
+    for index in mutated_indexes:
+        individual[index] = random.choice(genes)
 
     return individual,
 
 
+def get_data(path_to_file):
+    data = pd.read_csv(path_to_file)
+    data = data.replace([np.inf, -np.inf], np.nan)
+    data.fillna(method='bfill', inplace=True)
+    data.fillna(value=0, inplace=True)
+    return data
+
+
 def main():
-    aggregations = [operators.StDev(), operators.Min(), operators.Average(),
-                    operators.Median(), operators.Skew(), operators.Kurtosis(),
-                    operators.Argmin(), operators.Argmax(), operators.Max(), operators.MinMax(),
-                    operators.Q1(), operators.Q5(), operators.Q10(), operators.Q25(),
-                    operators.Q75(), operators.Q90(), operators.Q95(), operators.Q99(),
-                    operators.NumPeaks(), operators.NumPeaks75(), operators.NumPeaks90(), operators.NumPeaks95(),
-                    operators.WelchFreq(), operators.WelchFreqAvg(), operators.WelchDensityAvg()]
-
-    transforms = [operators.Abs(), operators.Power2(), operators.MedFilt5(), operators.Scale(), operators.Log(),
-                  operators.Roll1000(), operators.Roll5000(), operators.Roll10000(), operators.Roll50000()]
-
-    slices = [operators.First1000(), operators.First5000(), operators.First10000(),
-              operators.First50000(), operators.Last1000(), operators.Last5000(),
-              operators.Last10000(), operators.Last50000(), operators.Raw()]
-
-#    operators.Hilbert()
+    train = get_data(config.path_to_train)
+    genes = [column for column in train.columns if column not in ['target', 'seg_id']]
 
     creator.create('FitnessMin', base.Fitness, weights=(-1,))
     creator.create('Individual', Chromosome, fitness=creator.FitnessMin)
 
     # register callbacks
     toolbox = base.Toolbox()
-    toolbox.register('individual', init_individual,
-                     creator.Individual, slices=slices, transforms=transforms,
-                     aggregations=aggregations, n_transforms_max=1)
+    toolbox.register('individual', init_individual, creator.Individual, genes=genes, size=15)
     toolbox.register('population', tools.initRepeat, list, toolbox.individual)
 
-    # best
-    best = toolbox.population(1)
-    best[0].set([operators.Last5000(), operators.Q95()])
-
     # raise population
-    pop = toolbox.population(20)
-    pop[0].set([operators.Raw(), operators.Q5()])
-    pop[1].set([operators.Raw(), operators.Q95()])
-    pop[2].set([operators.Raw(), operators.WelchDensityAvg()])
-    pop[3].set([operators.Raw(), operators.WelchFreqAvg()])
-    pop[4].set([operators.Raw(), operators.WelchFreq()])
+    pop = toolbox.population(50)
+    pop[0].genes = [
+        'mfcc_15_avg', 'std_roll_mean_100', 'ffti_time_rev_asym_stat_10', 'mfcc_4_avg',
+        'fftr_percentile_roll_std_80_window_10000', 'percentile_roll_std_20_window_1000',
+        'ffti_exp_Moving_average_30000_mean', 'fftr_time_rev_asym_stat_100',
+        'fftr_percentile_roll_std_30_window_100', 'ffti_count_big_50000_threshold_5',
+        'percentile_roll_std_25_window_1000', 'percentile_roll_std_20_window_100',
+        'percentile_roll_std_40_window_100', 'fftr_percentile_roll_std_1_window_50',
+        'percentile_roll_std_40_window_1000'
+    ]
+
+    pop[1].genes = [
+        'mfcc_15_avg', 'std_roll_mean_100', 'ffti_time_rev_asym_stat_10', 'mfcc_4_avg',
+        'fftr_percentile_roll_std_80_window_10000', 'percentile_roll_std_20_window_1000',
+        'ffti_exp_Moving_average_30000_mean', 'fftr_time_rev_asym_stat_100',
+        'fftr_percentile_roll_std_30_window_100', 'percentile_roll_std_30_window_50',
+        'fftr_num_peaks_100', 'ffti_mfcc_7_avg', 'ffti_classic_sta_lta3_mean',
+        'fftr_percentile_roll_std_1_window_50', 'percentile_roll_std_40_window_1000'
+    ]
 
     # set the model for evaluation of fitness function
-    model = RandomForestRegressor(n_estimators=20)
-#    model = CatBoostRegressor(random_seed=0, loss_function='MAE', verbose=False, learning_rate=0.1)
+    model = RandomForestRegressor(n_estimators=100, random_state=0)
 
     hof = tools.HallOfFame(5)
 
     # register fitness evaluator
-    toolbox.register('evaluate', evaluate, best=best, model=model, n_train_obs=3000, n_test_obs=700, seg_size=150000)
+    toolbox.register('evaluate', evaluate, model=model, train=train, n_splits=5, n_jobs=config.n_jobs)
     # crossover
-    toolbox.register('mate', crossover)
+    toolbox.register('mate', tools.cxTwoPoint)
     # mutation
-    toolbox.register('mutate', mutate, slices=slices, transforms=transforms, aggregations=aggregations, pb=0.2)
+    toolbox.register('mutate', mutate, genes=genes, pb=0.2)
     # register elitism operator
-#    toolbox.register('select', tools.selTournament, tournsize=3)
     toolbox.register('select', tools.selBest)
 
     stats = tools.Statistics(key=lambda ind: ind.fitness.values)
@@ -291,13 +138,17 @@ def main():
     stats.register("min", np.min, axis=0)
     stats.register("max", np.max, axis=0)
 
-#    algorithms.eaSimple(pop, toolbox, cxpb=0.5, mutpb=0.2, ngen=10, stats=stats, halloffame=hof, verbose=True)
-    algorithms.eaMuPlusLambda(pop, toolbox,
-                              mu=6, lambda_=10, cxpb=0.5, mutpb=0.5, ngen=5,
-                              stats=stats, halloffame=hof, verbose=True)
+    try:
+        algorithms.eaMuPlusLambda(
+            pop, toolbox,
+            mu=10, lambda_=30, cxpb=0.5, mutpb=0.5,
+            ngen=50, stats=stats, halloffame=hof, verbose=True)
+    except (Exception, KeyboardInterrupt):
+        for individual in hof:
+            logging.info('hof: %.3f << %s' % (individual.fitness.values[0], individual))
 
-    for ind in hof:
-        logging.info('hof: %.3f << %s' % (ind.fitness.values[0], ind))
+    for individual in hof:
+        logging.info('hof: %.3f << %s' % (individual.fitness.values[0], individual))
 
 
 if __name__ == '__main__':
