@@ -8,3 +8,5 @@ scipy
 sklearn
 tqdm
 joblib
+librosa
+tsfresh

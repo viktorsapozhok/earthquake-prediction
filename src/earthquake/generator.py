@@ -3,16 +3,14 @@
 """Feature engineering
 """
 
+import argparse
+from tqdm import tqdm
+
 import numpy as np
 import pandas as pd
 import librosa
 
-from tqdm import tqdm
-
 from sklearn.linear_model import LinearRegression
-
-import warnings
-warnings.filterwarnings("ignore")
 
 from scipy import signal
 from scipy import stats
@@ -21,46 +19,71 @@ from itertools import product
 from tsfresh.feature_extraction import feature_calculators
 from joblib import Parallel, delayed
 
+import warnings
 import config
+
+warnings.filterwarnings("ignore")
 
 
 class FeatureGenerator(object):
-    def __init__(self, path_to_store, dtype='train', n_rows=None, n_jobs=1, chunk_size=None):
+    def __init__(self, path_to_store, is_train=True, n_rows=1e6, n_jobs=1, segment_size=150000):
+        """Decomposition of initial signal into the set of features.
+
+        :param path_to_store: path to .hdf store with original signal data
+        :param is_train: boolean, True if creating the training set, False if test set
+        :param n_rows: amount of rows in training store (not specified for case is_train=False)
+        :param n_jobs: amount of parallel jobs
+        :param segment_size: amount of observations in each segment
+        """
         self.path_to_store = path_to_store
-        self.dtype = dtype
-        self.signal_name = 'acoustic_data'
-        self.target_name = 'time_to_failure'
         self.n_rows = n_rows
         self.n_jobs = n_jobs
-        self.chunk_size = chunk_size
+        self.segment_size = segment_size
+        self.is_train = is_train
 
-        if dtype == 'train':
-            self.total = int(self.n_rows / self.chunk_size)
+        if self.is_train:
+            self.total = int(self.n_rows / self.segment_size)
+            self.store = None
+            self.keys = None
         else:
             self.store = pd.HDFStore(self.path_to_store, mode='r')
             self.keys = self.store.keys()
+            self.keys = self.keys[:20]
             self.total = len(self.keys)
 
-    def read_chunks(self):
-        if self.dtype == 'train':
+    def __del__(self):
+        if self.store is not None:
+            self.store.close()
+
+    def read_segments(self):
+        if self.is_train:
             for i in range(self.total):
-                df = pd.read_hdf(self.path_to_store, start=i * self.chunk_size, stop=(i + 1) * self.chunk_size)
-                x = df[self.signal_name].values
-                y = df[self.target_name].values[-1]
+                start = i * self.segment_size
+                stop = (i + 1) * self.segment_size
+
+                # read one segment of data from .hdf store
+                data = pd.read_hdf(self.path_to_store, start=start, stop=stop)
+
+                x = data['acoustic_data'].values
+                y = data['time_to_failure'].values[-1]
                 seg_id = 'train_' + str(i)
-                del df
+
+                del data
                 yield seg_id, x, y
         else:
             for key in self.keys:
                 seg_id = key[1:]
-                x = self.store[key][self.signal_name].values
+                x = self.store[key]['acoustic_data'].values
                 yield seg_id, x, -999
 
     def get_features(self, x, y, seg_id):
         x = pd.Series(x)
 
+        # fast fourier transform
         zc = np.fft.fft(x)
+        # real part
         realFFT = pd.Series(np.real(zc))
+        # imaginary part
         imagFFT = pd.Series(np.imag(zc))
 
         main_dict = self.features(x, y, seg_id)
@@ -83,22 +106,14 @@ class FeatureGenerator(object):
         feature_dict['seg_id'] = seg_id
 
         # lists with parameters to iterate over them
-#        percentiles = [1, 5, 10, 20, 25, 30, 40, 50, 60, 70, 75, 80, 90, 95, 99]
-        percentiles = [1, 5, 20, 30, 40, 80]
-#        hann_windows = [50, 150, 1500, 15000]
-        hann_windows = [1500]
-#        spans = [300, 3000, 30000, 50000]
-        spans = [30000]
-#        windows = [10, 50, 100, 500, 1000, 10000]
-        windows = [50, 100, 1000, 10000]
-#        borders = list(range(-4000, 4001, 1000))
-        borders = [1000]
-#        peaks = [10, 20, 50, 100]
-        peaks = [100]
-#        coefs = [1, 5, 10, 50, 100]
-        coefs = [100]
-#        autocorr_lags = [5, 10, 50, 100, 500, 1000, 5000, 10000]
-        autocorr_lags = [5]
+        percentiles = [1, 5, 10, 20, 25, 30, 40, 50, 60, 70, 75, 80, 90, 95, 99]
+        hann_windows = [50, 150, 1500, 15000]
+        spans = [300, 3000, 30000, 50000]
+        windows = [10, 50, 100, 500, 1000, 10000]
+        borders = list(range(-4000, 4001, 1000))
+        peaks = [10, 20, 50, 100]
+        coefs = [1, 5, 10, 50, 100]
+        autocorr_lags = [5, 10, 50, 100, 500, 1000, 5000, 10000]
 
         # basic stats
         feature_dict['mean'] = x.mean()
@@ -112,7 +127,7 @@ class FeatureGenerator(object):
         feature_dict['abs_mean'] = np.abs(x).mean()
         feature_dict['abs_std'] = np.abs(x).std()
 
-        # geometric and harminic means
+        # geometric and harmonic means
         feature_dict['hmean'] = stats.hmean(np.abs(x[np.nonzero(x)[0]]))
         feature_dict['gmean'] = stats.gmean(np.abs(x[np.nonzero(x)[0]]))
 
@@ -138,6 +153,7 @@ class FeatureGenerator(object):
         feature_dict['sum'] = x.sum()
 
         feature_dict['mean_change_rate'] = self.calc_change_rate(x)
+
         # calc_change_rate on slices of data
         for slice_length, direction in product([1000, 10000, 50000], ['first', 'last']):
             if direction == 'first':
@@ -263,7 +279,7 @@ class FeatureGenerator(object):
         feature_list = []
         res = Parallel(n_jobs=self.n_jobs, backend='threading')(
             delayed(self.get_features)(x, y, s)
-            for s, x, y in tqdm(self.read_chunks(),
+            for s, x, y in tqdm(self.read_segments(),
                                 total=self.total,
                                 ncols=100,
                                 desc='generating features',
@@ -321,20 +337,32 @@ class FeatureGenerator(object):
         return np.mean(change)
 
 
+def main(args):
+    if args['train']:
+        fg = FeatureGenerator(
+            config.path_to_train_store,
+            is_train=True, n_rows=config.n_rows_all,
+            n_jobs=config.n_jobs, segment_size=config.segment_size)
+    else:
+        fg = FeatureGenerator(
+            config.path_to_test_store,
+            is_train=False, n_jobs=config.n_jobs)
+
+    data = fg.generate()
+    data.to_csv(config.path_to_test, index=False, float_format='%.5f')
+
+
 if __name__ == '__main__':
-#    fg = FeatureGenerator(
-#        config.path_to_hdf,
-#        dtype='train',
-#        n_rows=config.n_rows_all,
-#        n_jobs=config.n_jobs,
-#        chunk_size=config.n_rows_seg)
+    arg_parser = argparse.ArgumentParser(
+        description='features generator',
+        formatter_class=argparse.RawTextHelpFormatter)
 
-    fg = FeatureGenerator(
-        config.path_to_test,
-        dtype='test',
-        n_rows=config.n_rows_all,
-        n_jobs=config.n_jobs,
-        chunk_size=config.n_rows_seg)
+    arg_parser.add_argument(
+        '--train', action='store_true',
+        help='make train set')
 
-    training_data = fg.generate()
-    training_data.to_csv(config.path_to_test_set, index=False, float_format='%.5f')
+    arg_parser.add_argument(
+        '--test', action='store_true',
+        help='make test set')
+
+    main(vars(arg_parser.parse_args()))

@@ -11,7 +11,7 @@ import pandas as pd
 
 from deap import creator, base, tools, algorithms
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.model_selection import cross_val_score, TimeSeriesSplit, KFold
+from sklearn.model_selection import cross_val_score
 
 import config
 
@@ -21,7 +21,15 @@ logger = logging.getLogger('ga')
 
 
 class Chromosome(object):
+    """
+    Chromosome represents the list of genes, whereas each gene is the name of feature.
+    Creating the chromosome we generate the random sample of features
+    """
     def __init__(self, genes, size):
+        """
+        :param genes: list of all feature names
+        :param size: number of genes in chromosome, i.e. number of features in the model
+        """
         self.genes = self.generate(genes, size)
 
     def __repr__(self):
@@ -52,6 +60,16 @@ def init_individual(ind_class, genes=None, size=None):
 
 
 def evaluate(individual, model=None, train=None, n_splits=5, n_jobs=1):
+    """Fitness value of the individual is introduced as the mean average error
+    of the model with the set of features given by the individual (chromosome).
+
+    :param individual: list of features (genes)
+    :param model: estimator
+    :param train: pandas dataframe contained all the features and target column
+    :param n_splits: amount of splits in cross-validation
+    :param n_jobs: amount of parallel jobs
+    :return: mean average error calculated over cv-folds
+    """
     x = train[individual.genes]
     y = train['target']
     mae_folds = cross_val_score(model, x, y, cv=n_splits, scoring='neg_mean_absolute_error', n_jobs=n_jobs)
@@ -79,6 +97,8 @@ def mutate(individual, genes=None, pb=0):
 
 
 def get_data(path_to_file):
+    """read data from .csv file and replace nans
+    """
     data = pd.read_csv(path_to_file)
     data = data.replace([np.inf, -np.inf], np.nan)
     data.fillna(method='bfill', inplace=True)
@@ -88,14 +108,16 @@ def get_data(path_to_file):
 
 def main():
     train = get_data(config.path_to_train)
+    # full list of all possible features
     genes = [column for column in train.columns if column not in ['target', 'seg_id']]
 
+    # set individual creator
     creator.create('FitnessMin', base.Fitness, weights=(-1,))
     creator.create('Individual', Chromosome, fitness=creator.FitnessMin)
 
     # register callbacks
     toolbox = base.Toolbox()
-    toolbox.register('individual', init_individual, creator.Individual, genes=genes, size=15)
+    toolbox.register('individual', init_individual, creator.Individual, genes=genes, size=config.n_features)
     toolbox.register('population', tools.initRepeat, list, toolbox.individual)
 
     # raise population
@@ -122,17 +144,19 @@ def main():
     # set the model for evaluation of fitness function
     model = RandomForestRegressor(n_estimators=100, random_state=0)
 
+    # keep track of the best individuals
     hof = tools.HallOfFame(5)
 
     # register fitness evaluator
     toolbox.register('evaluate', evaluate, model=model, train=train, n_splits=5, n_jobs=config.n_jobs)
-    # crossover
+    # using standard crossover
     toolbox.register('mate', tools.cxTwoPoint)
-    # mutation
+    # replace mutation operator by custom method
     toolbox.register('mutate', mutate, genes=genes, pb=0.2)
     # register elitism operator
     toolbox.register('select', tools.selBest)
 
+    # set the statistics (displayed for each generation)
     stats = tools.Statistics(key=lambda ind: ind.fitness.values)
     stats.register("avg", np.mean, axis=0)
     stats.register("min", np.min, axis=0)

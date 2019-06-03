@@ -26,14 +26,14 @@ def submit():
     features = init_features()
 
     train_set = pd.read_csv(config.path_to_train)
-    test_set = pd.read_csv(config.path_to_test_set)
+    test_set = pd.read_csv(config.path_to_test)
 
     model = RandomForestRegressor(n_estimators=500)
     model.fit(train_set[features], train_set['target'])
 
     results = pd.DataFrame()
     results['seg_id'] = test_set['seg_id']
-    results[config.target_name] = model.predict(test_set[features])
+    results['time_to_failure'] = model.predict(test_set[features])
 
     results.to_csv(config.path_to_results, index=False, float_format='%.5f')
 
