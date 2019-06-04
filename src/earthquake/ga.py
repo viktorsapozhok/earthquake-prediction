@@ -13,6 +13,8 @@ from deap import creator, base, tools, algorithms
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import cross_val_score
 
+from operator import attrgetter
+
 import config
 
 logging.basicConfig(format='%(asctime)s | %(name)s | %(message)s',
@@ -108,6 +110,16 @@ def mutate(individual, genes=None, pb=0):
     return individual,
 
 
+def select_best(individuals, k, fit_attr="fitness"):
+    """Custom select operator
+
+    The only difference with standard 'selBest' method (select k best individuals)
+    is that this method doesnt select two individuals with equal fitness value.
+    It is done to prevent populations with many duplicate individuals
+    """
+    return sorted(set(individuals), key=attrgetter(fit_attr), reverse=True)[:k]
+
+
 def get_data(path_to_file):
     """read data from .csv file and replace nans
     """
@@ -148,7 +160,7 @@ def main():
     # replace mutation operator by custom method
     toolbox.register('mutate', mutate, genes=genes, pb=0.2)
     # register elitism operator
-    toolbox.register('select', tools.selBest)
+    toolbox.register('select', select_best)
 
     # set the statistics (displayed for each generation)
     stats = tools.Statistics(key=lambda ind: ind.fitness.values)
