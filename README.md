@@ -1,5 +1,8 @@
 # LANL Earthquake Prediction
 
+This repository presents an approach used for solving [Kaggle "Earthquake Prediction"](https://www.kaggle.com/c/LANL-Earthquake-Prediction/overview/description) problem.
+The description of input data can be seen [here](https://www.kaggle.com/c/LANL-Earthquake-Prediction/data).
+
 ## Project structure
 
 ### data

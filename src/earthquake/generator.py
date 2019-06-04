@@ -48,14 +48,15 @@ class FeatureGenerator(object):
         else:
             self.store = pd.HDFStore(self.path_to_store, mode='r')
             self.keys = self.store.keys()
-            self.keys = self.keys[:20]
             self.total = len(self.keys)
 
     def __del__(self):
         if self.store is not None:
             self.store.close()
 
-    def read_segments(self):
+    def segments(self):
+        """returns generator object to iterate over segments
+        """
         if self.is_train:
             for i in range(self.total):
                 start = i * self.segment_size
@@ -279,7 +280,7 @@ class FeatureGenerator(object):
         feature_list = []
         res = Parallel(n_jobs=self.n_jobs, backend='threading')(
             delayed(self.get_features)(x, y, s)
-            for s, x, y in tqdm(self.read_segments(),
+            for s, x, y in tqdm(self.segments(),
                                 total=self.total,
                                 ncols=100,
                                 desc='generating features',

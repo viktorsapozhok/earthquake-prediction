@@ -140,7 +140,7 @@ def tune_catboost(X, y, **kwargs):
 
                                 mae = cross_val_score(model, X, y, cv=n_splits, scoring='neg_mean_absolute_error')
 
-                                logger.info('%4.0f | %5.0f | %4.1f | %4.2f | %4.1f | %4.1f | %5s | %7.2f' %
+                                logger.info('%4.0f | %5.0f | %4.1f | %4.2f | %4.1f | %4.1f | %5s | %7.3f' %
                                             (iter, d, rs, r, l2, bt, lf, abs(mae.mean())))
 
                             

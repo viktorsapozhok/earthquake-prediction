@@ -68,7 +68,7 @@ def evaluate(individual, model=None, train=None, n_splits=5, n_jobs=1):
     :param train: pandas dataframe contained all the features and target column
     :param n_splits: amount of splits in cross-validation
     :param n_jobs: amount of parallel jobs
-    :return: mean average error calculated over cv-folds
+    :return: mean average error calculated over cv-folds (tuple)
     """
     x = train[individual.genes]
     y = train['target']
@@ -80,6 +80,18 @@ def evaluate(individual, model=None, train=None, n_splits=5, n_jobs=1):
 
 
 def mutate(individual, genes=None, pb=0):
+    """Custom mutation operator which is used instead of standard tools
+
+    We define the maximal number of genes which can be mutated,
+    then generate a random number of mutated genes (from 1 to max),
+    and make a mutation.
+
+    :param individual: list of features (genes)
+    :param genes: list of all possible features
+    :param pb: mutation parameter, 0 < pb < 1
+    :return: mutated individual (tuple)
+    """
+
     # set the maximal amount of mutated genes
     n_mutated_max = max(1, int(len(individual) * pb))
 
@@ -122,6 +134,9 @@ def main():
 
     # raise population
     pop = toolbox.population(50)
+
+    # to accelerate algorithm's performance we manually set first two individuals
+    # in population using two features sets which (we know) demonstrate good CV performance
     pop[0].genes = [
         'mfcc_15_avg', 'std_roll_mean_100', 'ffti_time_rev_asym_stat_10', 'mfcc_4_avg',
         'fftr_percentile_roll_std_80_window_10000', 'percentile_roll_std_20_window_1000',
@@ -139,6 +154,12 @@ def main():
         'fftr_percentile_roll_std_30_window_100', 'percentile_roll_std_30_window_50',
         'fftr_num_peaks_100', 'ffti_mfcc_7_avg', 'ffti_classic_sta_lta3_mean',
         'fftr_percentile_roll_std_1_window_50', 'percentile_roll_std_40_window_1000'
+    ]
+
+    pop[2].genes = [
+        'mfcc_15_avg', 'mfcc_4_avg', 'mfcc_5_avg',
+        'fftr_percentile_roll_std_5_window_10', 'percentile_roll_std_5_window_100',
+        'percentile_roll_std_5_window_1000'
     ]
 
     # set the model for evaluation of fitness function
@@ -162,6 +183,11 @@ def main():
     stats.register("min", np.min, axis=0)
     stats.register("max", np.max, axis=0)
 
+    # mu: the number of individuals to select for the next generation
+    # lambda: the number of children to produce at each generation
+    # cxpb: the probability that offspring is produced by crossover
+    # mutpb: the probability that offspring is produced by mutation
+    # ngen: the number of generations
     try:
         algorithms.eaMuPlusLambda(
             pop, toolbox,
