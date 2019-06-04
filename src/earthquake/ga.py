@@ -135,33 +135,6 @@ def main():
     # raise population
     pop = toolbox.population(50)
 
-    # to accelerate algorithm's performance we manually set first two individuals
-    # in population using two features sets which (we know) demonstrate good CV performance
-    pop[0].genes = [
-        'mfcc_15_avg', 'std_roll_mean_100', 'ffti_time_rev_asym_stat_10', 'mfcc_4_avg',
-        'fftr_percentile_roll_std_80_window_10000', 'percentile_roll_std_20_window_1000',
-        'ffti_exp_Moving_average_30000_mean', 'fftr_time_rev_asym_stat_100',
-        'fftr_percentile_roll_std_30_window_100', 'ffti_count_big_50000_threshold_5',
-        'percentile_roll_std_25_window_1000', 'percentile_roll_std_20_window_100',
-        'percentile_roll_std_40_window_100', 'fftr_percentile_roll_std_1_window_50',
-        'percentile_roll_std_40_window_1000'
-    ]
-
-    pop[1].genes = [
-        'mfcc_15_avg', 'std_roll_mean_100', 'ffti_time_rev_asym_stat_10', 'mfcc_4_avg',
-        'fftr_percentile_roll_std_80_window_10000', 'percentile_roll_std_20_window_1000',
-        'ffti_exp_Moving_average_30000_mean', 'fftr_time_rev_asym_stat_100',
-        'fftr_percentile_roll_std_30_window_100', 'percentile_roll_std_30_window_50',
-        'fftr_num_peaks_100', 'ffti_mfcc_7_avg', 'ffti_classic_sta_lta3_mean',
-        'fftr_percentile_roll_std_1_window_50', 'percentile_roll_std_40_window_1000'
-    ]
-
-    pop[2].genes = [
-        'mfcc_15_avg', 'mfcc_4_avg', 'mfcc_5_avg',
-        'fftr_percentile_roll_std_5_window_10', 'percentile_roll_std_5_window_100',
-        'percentile_roll_std_5_window_1000'
-    ]
-
     # set the model for evaluation of fitness function
     model = RandomForestRegressor(n_estimators=100, random_state=0)
 
