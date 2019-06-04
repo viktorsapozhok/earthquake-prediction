@@ -56,11 +56,11 @@ List of 15 most important features.
 
 ### Training
 
-## Results
+### Results
 
 `Cross-validation MAE`: 2.042, `public score`: 1.509, `private score`: 2.425 (31 place). 
    
-## Links:
+### Links:
 
 * LANL Earthquake Prediction, Kaggle competition: https://www.kaggle.com/c/LANL-Earthquake-Prediction
 * Feature Engineering: https://www.kaggle.com/artgor/even-more-features
