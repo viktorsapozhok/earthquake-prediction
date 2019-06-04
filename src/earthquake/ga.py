@@ -10,8 +10,8 @@ import numpy as np
 import pandas as pd
 
 from deap import creator, base, tools, algorithms
-from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import cross_val_score
+from catboost import CatBoostRegressor
 
 from operator import attrgetter
 
@@ -148,7 +148,7 @@ def main():
     pop = toolbox.population(50)
 
     # set the model for evaluation of fitness function
-    model = RandomForestRegressor(n_estimators=100, random_state=0)
+    model = CatBoostRegressor(iterations=60, learning_rate=0.2, random_seed=0, verbose=False)
 
     # keep track of the best individuals
     hof = tools.HallOfFame(5)
@@ -176,7 +176,7 @@ def main():
     try:
         algorithms.eaMuPlusLambda(
             pop, toolbox,
-            mu=10, lambda_=30, cxpb=0.5, mutpb=0.5,
+            mu=10, lambda_=30, cxpb=0.2, mutpb=0.8,
             ngen=50, stats=stats, halloffame=hof, verbose=True)
     except (Exception, KeyboardInterrupt):
         for individual in hof:
