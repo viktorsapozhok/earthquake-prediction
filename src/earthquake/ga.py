@@ -7,7 +7,6 @@ import random
 import logging
 
 import numpy as np
-import pandas as pd
 
 from deap import creator, base, tools, algorithms
 from sklearn.model_selection import cross_val_score
@@ -15,6 +14,7 @@ from catboost import CatBoostRegressor
 
 from operator import attrgetter
 
+from src.earthquake import utils
 import config
 
 logging.basicConfig(format='%(asctime)s | %(name)s | %(message)s',
@@ -120,18 +120,8 @@ def select_best(individuals, k, fit_attr="fitness"):
     return sorted(set(individuals), key=attrgetter(fit_attr), reverse=True)[:k]
 
 
-def get_data(path_to_file):
-    """read data from .csv file and replace nans
-    """
-    data = pd.read_csv(path_to_file)
-    data = data.replace([np.inf, -np.inf], np.nan)
-    data.fillna(method='bfill', inplace=True)
-    data.fillna(value=0, inplace=True)
-    return data
-
-
 def main():
-    train = get_data(config.path_to_train)
+    train = utils.read_csv(config.path_to_train)
     # full list of all possible features
     genes = [column for column in train.columns if column not in ['target', 'seg_id']]
 
