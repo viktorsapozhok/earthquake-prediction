@@ -10,7 +10,7 @@ trained the model using CatboostRegressor with default parameters.
 
 ### Feature engineering
 
-The initial acoustic signal is decomposed into segments with 150000 rows per segment,  
+The initial acoustic signal is decomposed into segments with 150000 rows per segment, 
 which suggests that the training dataset has 4194 rows. Features are calculated as aggregations over segments.
 For more details see, for example, 
 [here](https://www.kaggle.com/gpreda/lanl-earthquake-eda-and-prediction) and 
