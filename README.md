@@ -16,10 +16,10 @@ For more details see, for example,
 [here](https://www.kaggle.com/gpreda/lanl-earthquake-eda-and-prediction) and 
 [here](https://www.kaggle.com/artgor/even-more-features).     
 
-### Feature selection
+### Baseline model
 
 Before we start with the feature selection, we calculate feature importance as it is explained 
-[here](https://explained.ai/rf-importance/index.html) and train the model on the 15 most important features.
+[here](https://explained.ai/rf-importance/index.html) and train the baseline model on the 15 most important features.
 
 ```python
 from src.earthquake import utils
@@ -80,6 +80,8 @@ CatboostRegressor (without any tuning) trained on 15 features having highest imp
 folds: [1.989 2.333 2.378 1.261 2.352]
 total: 2.062
 ```
+
+### Feature selection
 
 ### Training
 
