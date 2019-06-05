@@ -104,7 +104,7 @@ total: 2.064
 To avoid potential overfitting, we employ genetic algorithm for feature selection. The genetic context is pretty straightforward.
 We suppose that the list of features (without duplicates) is the chromosome, whereas each gene represents one feature.
 `n_features` is the input parameter controlling the amount of genes in chromosome. 
-We generate the population from 50 chromosomes, where each gene is generated as a random choice from initial list of features (1496 features).
+We generate the population with 50 chromosomes, where each gene is generated as a random choice from initial list of features (1496 features).
 To accelerate the performance, we also add to population the feature set used in the baseline model.   
 
 Standard two-point crossover operator is used for crossing two chromosomes. 
@@ -112,14 +112,14 @@ To implement a mutation, we firstly generate a random amount of genes (> 1), whi
 mutate these genes so that the chromosome doesn't contain two equal genes. 
 
 For fitness evaluation we use lightened version of CatboostRegressor with decreased number of iterations and 
-increased learning_rate.  
+increased learning rate.  
 
 ```python
 model = CatBoostRegressor(iterations=60, learning_rate=0.2, random_seed=0, verbose=False)
 ```
 
 We set `cxpb=0.2` the probability that offspring is produced by crossover, and`mutpb=0.8` probability that offspring is produced by mutation. 
-Mutation probability is intentionally increased to prevent a high occurrence of identical chromosomes in generation.   
+Mutation probability is intentionally increased to prevent a high occurrence of identical chromosomes produced by crossover.   
 
 Here is the list of 15 features contained in the best chromosome after 50 generations.
 
@@ -143,7 +143,16 @@ Here is the list of 15 features contained in the best chromosome after 50 genera
 
 ### Training
 
-### Results
+We again apply default Catboost to the found feature set and obtain mean average error 2.048.
+
+```
+folds: [1.973 2.313 2.357 1.262 2.334]
+total: 2.048
+```
+
+The observed results are used for submission.
+
+### Submission results
 
 `Cross-validation MAE`: 2.048, `public score`: 1.509, `private score`: 2.425 (31 place). 
    
