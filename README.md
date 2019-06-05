@@ -67,7 +67,8 @@ np.set_printoptions(precision=3)
 # init model
 model = CatBoostRegressor(verbose=False)
 # calculate mae on folds
-mae = cross_val_score(model, data[best_features], data['target'], cv=5, scoring='neg_mean_absolute_error', n_jobs=8)
+mae = cross_val_score(model, data[best_features], data['target'], 
+    cv=5, scoring='neg_mean_absolute_error', n_jobs=8)
 # print the results
 print('folds: {}'.format(abs(mae)))
 print('total: {:.3f}'.format(np.mean(abs(mae))))
