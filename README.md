@@ -103,12 +103,43 @@ total: 2.064
 
 To avoid potential overfitting, we employ genetic algorithm for feature selection. The genetic context is pretty straightforward.
 We suppose that the list of features (without duplicates) is the chromosome, whereas each gene represents one feature.
+`n_features` is the input parameter controlling the amount of genes in chromosome. 
 We generate the population from 50 chromosomes, where each gene is generated as a random choice from initial list of features (1496 features).
-   
+To accelerate the performance, we also add to population the feature set used in the baseline model.   
+
 Standard two-point crossover operator is used for crossing two chromosomes. 
 To implement a mutation, we firstly generate a random amount of genes (> 1), which needs to be mutated, and then
 mutate these genes so that the chromosome doesn't contain two equal genes. 
 
+For fitness evaluation we use lightened version of CatboostRegressor with decreased number of iterations and 
+increased learning_rate.  
+
+```python
+model = CatBoostRegressor(iterations=60, learning_rate=0.2, random_seed=0, verbose=False)
+```
+
+We set `cxpb=0.2` the probability that offspring is produced by crossover, and`mutpb=0.8` probability that offspring is produced by mutation. 
+Mutation probability is intentionally increased to prevent a high occurrence of identical chromosomes in generation.   
+
+Here is the list of 15 features contained in the best chromosome after 50 generations.
+
+```
+1. ffti_av_change_rate_roll_mean_1000
+2. percentile_roll_std_30_window_50
+3. skew
+4. percentile_roll_std_10_window_100
+5. percentile_roll_std_30_window_50
+6. percentile_roll_std_20_window_1000
+7. ffti_exp_Moving_average_30000_mean
+8. range_3000_4000
+9. max_last_10000
+10. mfcc_4_avg
+11. fftr_percentile_roll_std_80_window_10000
+12. percentile_roll_std_1_window_100
+13. ffti_abs_trend
+14. av_change_abs_roll_mean_50
+15. mfcc_15_avg
+```
 
 ### Training
 
