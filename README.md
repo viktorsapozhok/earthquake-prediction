@@ -14,7 +14,7 @@ The initial acoustic signal is decomposed into segments with 150000 rows per seg
 which suggests that the training dataset has 4194 rows. Features are calculated as aggregations over segments.
 For more details see, for example, 
 [here](https://www.kaggle.com/gpreda/lanl-earthquake-eda-and-prediction) and 
-[here](https://www.kaggle.com/artgor/even-more-features).     
+[here](https://www.kaggle.com/artgor/even-more-features).      
 
 ### Baseline model
 
@@ -82,6 +82,15 @@ total: 2.064
 ```
 
 ### Feature selection
+
+To avoid potential overfitting, we employ genetic algorithm for feature selection. The genetic context is pretty straightforward.
+We suppose that the list of features (without duplicates) is the chromosome, whereas each gene represents one feature.
+We generate the population as the set of 50 chromosomes, where each gene is generated as a random choice from initial list of features (1496 features).
+   
+Standard two-point crossover operator is used for crossing two chromosomes. 
+To implement a mutation, we firstly generate a random amount of genes (> 1), which need to be mutated, and then
+mutate these genes so that the chromosome doesn't contain two equal genes. 
+
 
 ### Training
 
