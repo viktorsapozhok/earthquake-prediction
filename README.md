@@ -65,7 +65,7 @@ from catboost import CatBoostRegressor
 # set output float precision 
 np.set_printoptions(precision=3)
 # init model
-model = CatBoostRegressor(verbose=False)
+model = CatBoostRegressor(random_seed=0, verbose=False)
 # calculate mae on folds
 mae = cross_val_score(model, data[best_features], data['target'], 
     cv=5, scoring='neg_mean_absolute_error', n_jobs=8)
@@ -77,8 +77,8 @@ print('total: {:.3f}'.format(np.mean(abs(mae))))
 CatboostRegressor (without any tuning) trained on 15 features having highest importance score demonstrates mean average error 2.062.   
 
 ```
-folds: [1.989 2.333 2.378 1.261 2.352]
-total: 2.062
+folds: [1.982 2.333 2.379 1.266 2.362]
+total: 2.064
 ```
 
 ### Feature selection
@@ -87,7 +87,7 @@ total: 2.062
 
 ### Results
 
-`Cross-validation MAE`: 2.042, `public score`: 1.509, `private score`: 2.425 (31 place). 
+`Cross-validation MAE`: 2.048, `public score`: 1.509, `private score`: 2.425 (31 place). 
    
 ### Links:
 
