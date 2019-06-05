@@ -121,7 +121,14 @@ model = CatBoostRegressor(iterations=60, learning_rate=0.2, random_seed=0, verbo
 We set `cxpb=0.2` the probability that offspring is produced by crossover, and`mutpb=0.8` probability that offspring is produced by mutation. 
 Mutation probability is intentionally increased to prevent a high occurrence of identical chromosomes produced by crossover.   
 
-Here is the list of 15 features contained in the best chromosome after 50 generations.
+```python
+from deap import algorithms
+
+algorithms.eaMuPlusLambda(pop, toolbox, 
+    mu=10, lambda_=30, cxpb=0.2, mutpb=0.8, ngen=50, stats=stats, halloffame=hof, verbose=True)
+```
+
+Here is the list of 15 features accumulated in the best chromosome after 50 generations.
 
 ```
 1. ffti_av_change_rate_roll_mean_1000
@@ -143,7 +150,7 @@ Here is the list of 15 features contained in the best chromosome after 50 genera
 
 ### Training
 
-We again apply default Catboost to the found feature set and obtain mean average error 2.048.
+We again apply default CatboostRegressor to the found feature set and obtain mean average error 2.048.
 
 ```
 folds: [1.973 2.313 2.357 1.262 2.334]
