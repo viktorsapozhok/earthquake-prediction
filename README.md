@@ -8,6 +8,24 @@ We applied genetic algorithm with CatboostRegressor for fitness evaluation to im
 Based on the GA's results, we selected [15 features](https://github.com/viktorsapozhok/earthquake-prediction/blob/master/src/earthquake/submission.py) and
 trained the model using CatboostRegressor with default parameters.
 
+### Project structure
+
+    ├── ...
+    ├── data                    
+    │   ├── train.csv           # Original training set decomposed into feature set
+    │   ├── test.csv            # Testing signal decomposed into feature set
+    │   ├── results.csv         # Modeling results prepared for submission
+    │── notebooks
+        ├── earthquake.ipynb    # Misc
+    │── src        
+        ├── earthquake
+            ├── ga.py           # GA for feature selection
+            ├── generator.py    # Feature engineering
+            ├── submission.py   # Make prediction and prepare file for submission
+            ├── utils.py        # Helpers
+    ├── config.py               # Configuration parameters    
+    ├── ...
+    
 ### Feature engineering
 
 The initial acoustic signal is decomposed into segments with 150000 rows per segment, 
@@ -85,10 +103,10 @@ total: 2.064
 
 To avoid potential overfitting, we employ genetic algorithm for feature selection. The genetic context is pretty straightforward.
 We suppose that the list of features (without duplicates) is the chromosome, whereas each gene represents one feature.
-We generate the population as the set of 50 chromosomes, where each gene is generated as a random choice from initial list of features (1496 features).
+We generate the population from 50 chromosomes, where each gene is generated as a random choice from initial list of features (1496 features).
    
 Standard two-point crossover operator is used for crossing two chromosomes. 
-To implement a mutation, we firstly generate a random amount of genes (> 1), which need to be mutated, and then
+To implement a mutation, we firstly generate a random amount of genes (> 1), which needs to be mutated, and then
 mutate these genes so that the chromosome doesn't contain two equal genes. 
 
 
