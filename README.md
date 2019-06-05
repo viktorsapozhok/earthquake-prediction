@@ -74,7 +74,7 @@ print('folds: {}'.format(abs(mae)))
 print('total: {:.3f}'.format(np.mean(abs(mae))))
 ```
 
-CatboostRegressor (without any tuning) trained on 15 features having highest importance score demonstrates mean average error 2.062.   
+CatboostRegressor (without any tuning) trained on 15 features having highest importance score demonstrates mean average error 2.064.   
 
 ```
 folds: [1.982 2.333 2.379 1.266 2.362]
