@@ -10,21 +10,22 @@ trained the model using CatboostRegressor with default parameters.
 
 ### Project structure
 
+    .
     ├── ...
     ├── data                    
-    │   ├── train.csv           # Original training set decomposed into feature set
-    │   ├── test.csv            # Testing signal decomposed into feature set
-    │   ├── results.csv         # Modeling results prepared for submission
+    |   ├── train.csv           # Original training set decomposed into feature set
+    |   ├── test.csv            # Testing signal decomposed into feature set
+    |   └── results.csv         # Modeling results prepared for submission
     │── notebooks
-        ├── earthquake.ipynb    # Misc
+        └── earthquake.ipynb    # Misc
     │── src        
         ├── earthquake
             ├── ga.py           # GA for feature selection
             ├── generator.py    # Feature engineering
             ├── submission.py   # Make prediction and prepare file for submission
-            ├── utils.py        # Helpers
+            └── utils.py        # Helpers
     ├── config.py               # Configuration parameters    
-    ├── ...
+    └── ...
     
 ### Feature engineering
 
