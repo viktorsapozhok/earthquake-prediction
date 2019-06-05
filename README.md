@@ -18,7 +18,7 @@ For more details see, for example,
 
 ### Feature selection
 
-Before we start feature selection process, we calculate feature importance as it is explained 
+Before we start with the feature selection, we calculate feature importance as it is explained 
 [here](https://explained.ai/rf-importance/index.html) and train the model on the 15 most important features.
 
 ```python
@@ -30,7 +30,7 @@ data = utils.read_csv(config.path_to_train)
 # create list of features
 features = [column for column in data.columns if column not in ['target', 'seg_id']]
 # display importance
-utils.feature_importance(data[features], data['target'], n_best=15)
+best_features = utils.feature_importance(data[features], data['target'], n_best=15, n_jobs=8)
 ```
 
 List of 15 most important features.
@@ -52,6 +52,32 @@ List of 15 most important features.
  0.01 | percentile_roll_std_10_window_50
  0.01 | percentile_roll_std_50_window_50
  0.01 | percentile_roll_std_40_window_1000
+```
+
+We train the model using CatboostRegressor with default parameters and evaluate the performance
+with a stratified KFold (5 folds) cross-validation. 
+
+```python
+import numpy as np
+from sklearn.model_selection import cross_val_score
+from catboost import CatBoostRegressor
+
+# set output float precision 
+np.set_printoptions(precision=3)
+# init model
+model = CatBoostRegressor(verbose=False)
+# calculate mae on folds
+mae = cross_val_score(model, data[best_features], data['target'], cv=5, scoring='neg_mean_absolute_error', n_jobs=8)
+# print the results
+print('folds: {}'.format(abs(mae)))
+print('total: {:.3f}'.format(np.mean(abs(mae))))
+```
+
+CatboostRegressor (without any tuning) trained on 15 features having highest importance score demonstrates mean average error 2.062.   
+
+```
+folds: [1.989 2.333 2.378 1.261 2.352]
+total: 2.062
 ```
 
 ### Training

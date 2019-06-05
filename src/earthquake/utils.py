@@ -22,9 +22,12 @@ def feature_importance(x, y, **kwargs):
     :param y: target
     :keyword n_best: number of displayed features, show all if None
     :keyword n_jobs: number of parallel jobs
+    :return: list of n_best most important features
     """
     n_best = kwargs.get('n_best', None)
     n_jobs = kwargs.get('n_jobs', 1)
+
+    best_features = []
 
     model = RandomForestRegressor(n_estimators=50, n_jobs=n_jobs)
     model.fit(x, y)
@@ -40,8 +43,12 @@ def feature_importance(x, y, **kwargs):
         i += 1
 
         if n_best is not None:
+            best_features += [index]
+
             if i >= n_best:
                 break
+
+    return best_features
 
 
 def read_csv(path_to_csv):
