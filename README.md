@@ -119,7 +119,7 @@ increased learning rate.
 model = CatBoostRegressor(iterations=60, learning_rate=0.2, random_seed=0, verbose=False)
 ```
 
-We set `cxpb=0.2` the probability that offspring is produced by crossover, and`mutpb=0.8` probability that offspring is produced by mutation. 
+We set `cxpb=0.2` the probability that offspring is produced by crossover, and `mutpb=0.8` probability that offspring is produced by mutation. 
 Mutation probability is intentionally increased to prevent a high occurrence of identical chromosomes produced by crossover.   
 
 ```python
@@ -166,7 +166,7 @@ The observed results are used for submission.
    
 ### Links:
 
-* LANL Earthquake Prediction, Kaggle competition: https://www.kaggle.com/c/LANL-Earthquake-Prediction
-* Feature Engineering: https://www.kaggle.com/artgor/even-more-features
-* LANL Earthquake EDA and Prediction: https://www.kaggle.com/gpreda/lanl-earthquake-eda-and-prediction
-* "Beware Default Random Forest Importances": https://explained.ai/rf-importance/index.html 
+* [LANL Earthquake Prediction, Kaggle competition](https://www.kaggle.com/c/LANL-Earthquake-Prediction)
+* [Feature Engineering](https://www.kaggle.com/artgor/even-more-features)
+* [LANL Earthquake EDA and Prediction](https://www.kaggle.com/gpreda/lanl-earthquake-eda-and-prediction)
+* ["Beware Default Random Forest Importances"](https://explained.ai/rf-importance/index.html)
