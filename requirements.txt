@@ -1,10 +1,10 @@
 deap
-tables
-pandas
-numpy
-scipy
-sklearn
-tqdm
 joblib
 librosa
+numpy
+pandas
+scipy
+sklearn
+tables
+tqdm
 tsfresh

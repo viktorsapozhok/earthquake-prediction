@@ -3,23 +3,18 @@
 """Feature selection based on genetic algorithm
 """
 
-import random
-import logging
-
-import numpy as np
-
-from deap import creator, base, tools, algorithms
-from sklearn.model_selection import cross_val_score
-from catboost import CatBoostRegressor
-
 from operator import attrgetter
+import random
+
+from catboost import CatBoostRegressor
+from deap import creator, base, tools, algorithms
+import numpy as np
+from sklearn.model_selection import cross_val_score
 
 from src.earthquake import utils
 import config
 
-logging.basicConfig(format='%(asctime)s | %(name)s | %(message)s',
-                    level=logging.INFO, datefmt='%Y-%m-%d %H:%M:%S')
-logger = logging.getLogger('ga')
+logger = config.setup_logger()
 
 
 class Chromosome(object):
@@ -170,10 +165,10 @@ def main():
             ngen=50, stats=stats, halloffame=hof, verbose=True)
     except (Exception, KeyboardInterrupt):
         for individual in hof:
-            logging.info('hof: %.3f << %s' % (individual.fitness.values[0], individual))
+            logger.info('hof: %.3f << %s' % (individual.fitness.values[0], individual))
 
     for individual in hof:
-        logging.info('hof: %.3f << %s' % (individual.fitness.values[0], individual))
+        logger.info('hof: %.3f << %s' % (individual.fitness.values[0], individual))
 
 
 if __name__ == '__main__':

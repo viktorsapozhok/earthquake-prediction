@@ -3,8 +3,8 @@
 """Make prediction and prepare results for submission
 """
 
-import pandas as pd
 from catboost import CatBoostRegressor
+import pandas as pd
 
 import config
 

@@ -3,6 +3,7 @@
 """Configuration parameters
 """
 
+import logging
 import os
 
 root_dir = os.path.dirname(os.path.abspath(__file__))
@@ -33,3 +34,15 @@ n_jobs = 8
 
 # amount of features in the model
 n_features = 15
+
+
+def setup_logger():
+    """Configure logger
+    """
+    logging.basicConfig(
+        format='%(asctime)s | %(name)s | %(message)s',
+        level=logging.INFO,
+        datefmt='%Y-%m-%d %H:%M:%S')
+    logger = logging.getLogger('earthquake')
+
+    return logger

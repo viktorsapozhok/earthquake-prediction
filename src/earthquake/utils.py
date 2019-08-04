@@ -7,11 +7,9 @@ import logging
 
 import numpy as np
 import pandas as pd
-
 import rfpimp
 from sklearn.ensemble import RandomForestRegressor
 
-logging.basicConfig(format='%(message)s', level=logging.INFO)
 logger = logging.getLogger('earthquake')
 
 
