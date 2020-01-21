@@ -1,8 +1,5 @@
-# -*- coding: utf-8 -*-
-
 """Feature engineering
 """
-
 import argparse
 from itertools import product
 import warnings
@@ -22,15 +19,29 @@ warnings.filterwarnings("ignore")
 
 
 class FeatureGenerator(object):
-    def __init__(self, path_to_store, is_train=True, n_rows=1e6, n_jobs=1, segment_size=150000):
+    def __init__(
+            self,
+            path_to_store,
+            is_train=True,
+            n_rows=1e6,
+            n_jobs=1,
+            segment_size=150000
+    ):
         """Decomposition of initial signal into the set of features.
 
-        :param path_to_store: path to .hdf store with original signal data
-        :param is_train: boolean, True if creating the training set, False if test set
-        :param n_rows: amount of rows in training store (not specified for case is_train=False)
-        :param n_jobs: amount of parallel jobs
-        :param segment_size: amount of observations in each segment
+        Args:
+            path_to_store:
+                Path to .hdf store with original signal data.
+            is_train:
+                True, if creating the training set.
+            n_rows:
+                Amount of rows in training store.
+            n_jobs:
+                Amount of parallel jobs.
+            segment_size:
+                Amount of observations in each segment
         """
+
         self.path_to_store = path_to_store
         self.n_rows = n_rows
         self.n_jobs = n_jobs
@@ -51,8 +62,9 @@ class FeatureGenerator(object):
             self.store.close()
 
     def segments(self):
-        """returns generator object to iterate over segments
+        """Returns generator object to iterate over segments.
         """
+
         if self.is_train:
             for i in range(self.total):
                 start = i * self.segment_size
@@ -103,14 +115,21 @@ class FeatureGenerator(object):
         feature_dict['seg_id'] = seg_id
 
         # lists with parameters to iterate over them
-        percentiles = [1, 5, 10, 20, 25, 30, 40, 50, 60, 70, 75, 80, 90, 95, 99]
-        hann_windows = [50, 150, 1500, 15000]
-        spans = [300, 3000, 30000, 50000]
-        windows = [10, 50, 100, 500, 1000, 10000]
+        percentiles = [
+            1, 5, 10, 20, 25, 30, 40, 50, 60, 70, 75, 80, 90, 95, 99]
+        hann_windows = [
+            50, 150, 1500, 15000]
+        spans = [
+            300, 3000, 30000, 50000]
+        windows = [
+            10, 50, 100, 500, 1000, 10000]
         borders = list(range(-4000, 4001, 1000))
-        peaks = [10, 20, 50, 100]
-        coefs = [1, 5, 10, 50, 100]
-        autocorr_lags = [5, 10, 50, 100, 500, 1000, 5000, 10000]
+        peaks = [
+            10, 20, 50, 100]
+        coefs = [
+            1, 5, 10, 50, 100]
+        autocorr_lags = [
+            5, 10, 50, 100, 500, 1000, 5000, 10000]
 
         # basic stats
         feature_dict['mean'] = x.mean()
@@ -137,12 +156,16 @@ class FeatureGenerator(object):
             feature_dict[f'kstatvar_{i}'] = stats.kstatvar(x, i)
 
         # aggregations on various slices of data
-        for agg_type, slice_length, direction in product(['std', 'min', 'max', 'mean'], [1000, 10000, 50000],
-                                                         ['first', 'last']):
+        for agg_type, slice_length, direction in product(
+                ['std', 'min', 'max', 'mean'],
+                [1000, 10000, 50000],
+                ['first', 'last']):
             if direction == 'first':
-                feature_dict[f'{agg_type}_{direction}_{slice_length}'] = x[:slice_length].agg(agg_type)
+                feature_dict[f'{agg_type}_{direction}_{slice_length}'] = \
+                    x[:slice_length].agg(agg_type)
             elif direction == 'last':
-                feature_dict[f'{agg_type}_{direction}_{slice_length}'] = x[-slice_length:].agg(agg_type)
+                feature_dict[f'{agg_type}_{direction}_{slice_length}'] = \
+                    x[-slice_length:].agg(agg_type)
 
         feature_dict['max_to_min'] = x.max() / np.abs(x.min())
         feature_dict['max_to_min_diff'] = x.max() - np.abs(x.min())
@@ -152,11 +175,14 @@ class FeatureGenerator(object):
         feature_dict['mean_change_rate'] = self.calc_change_rate(x)
 
         # calc_change_rate on slices of data
-        for slice_length, direction in product([1000, 10000, 50000], ['first', 'last']):
+        for slice_length, direction in product(
+                [1000, 10000, 50000], ['first', 'last']):
             if direction == 'first':
-                feature_dict[f'mean_change_rate_{direction}_{slice_length}'] = self.calc_change_rate(x[:slice_length])
+                feature_dict[f'mean_change_rate_{direction}_{slice_length}'] = \
+                    self.calc_change_rate(x[:slice_length])
             elif direction == 'last':
-                feature_dict[f'mean_change_rate_{direction}_{slice_length}'] = self.calc_change_rate(x[-slice_length:])
+                feature_dict[f'mean_change_rate_{direction}_{slice_length}'] = \
+                    self.calc_change_rate(x[-slice_length:])
 
         # percentiles on original and absolute values
         for p in percentiles:
@@ -174,58 +200,78 @@ class FeatureGenerator(object):
         feature_dict['Hilbert_mean'] = np.abs(signal.hilbert(x)).mean()
 
         for hw in hann_windows:
-            feature_dict[f'Hann_window_mean_{hw}'] = (signal.convolve(x, signal.hann(hw), mode='same') / sum(signal.hann(hw))).mean()
+            feature_dict[f'Hann_window_mean_{hw}'] = \
+                (signal.convolve(x, signal.hann(hw), mode='same') / sum(signal.hann(hw))).mean()
 
-        feature_dict['classic_sta_lta1_mean'] = self.classic_sta_lta(x, 500, 10000).mean()
-        feature_dict['classic_sta_lta2_mean'] = self.classic_sta_lta(x, 5000, 100000).mean()
-        feature_dict['classic_sta_lta3_mean'] = self.classic_sta_lta(x, 3333, 6666).mean()
-        feature_dict['classic_sta_lta4_mean'] = self.classic_sta_lta(x, 10000, 25000).mean()
-        feature_dict['classic_sta_lta5_mean'] = self.classic_sta_lta(x, 50, 1000).mean()
-        feature_dict['classic_sta_lta6_mean'] = self.classic_sta_lta(x, 100, 5000).mean()
-        feature_dict['classic_sta_lta7_mean'] = self.classic_sta_lta(x, 333, 666).mean()
-        feature_dict['classic_sta_lta8_mean'] = self.classic_sta_lta(x, 4000, 10000).mean()
+        feature_dict['classic_sta_lta1_mean'] = \
+            self.classic_sta_lta(x, 500, 10000).mean()
+        feature_dict['classic_sta_lta2_mean'] = \
+            self.classic_sta_lta(x, 5000, 100000).mean()
+        feature_dict['classic_sta_lta3_mean'] = \
+            self.classic_sta_lta(x, 3333, 6666).mean()
+        feature_dict['classic_sta_lta4_mean'] = \
+            self.classic_sta_lta(x, 10000, 25000).mean()
+        feature_dict['classic_sta_lta5_mean'] = \
+            self.classic_sta_lta(x, 50, 1000).mean()
+        feature_dict['classic_sta_lta6_mean'] = \
+            self.classic_sta_lta(x, 100, 5000).mean()
+        feature_dict['classic_sta_lta7_mean'] = \
+            self.classic_sta_lta(x, 333, 666).mean()
+        feature_dict['classic_sta_lta8_mean'] = \
+            self.classic_sta_lta(x, 4000, 10000).mean()
 
         # exponential rolling statistics
         ewma = pd.Series.ewm
         for s in spans:
-            feature_dict[f'exp_Moving_average_{s}_mean'] = (ewma(x, span=s).mean(skipna=True)).mean(skipna=True)
-            feature_dict[f'exp_Moving_average_{s}_std'] = (ewma(x, span=s).mean(skipna=True)).std(skipna=True)
-            feature_dict[f'exp_Moving_std_{s}_mean'] = (ewma(x, span=s).std(skipna=True)).mean(skipna=True)
-            feature_dict[f'exp_Moving_std_{s}_std'] = (ewma(x, span=s).std(skipna=True)).std(skipna=True)
+            feature_dict[f'exp_Moving_average_{s}_mean'] = \
+                (ewma(x, span=s).mean(skipna=True)).mean(skipna=True)
+            feature_dict[f'exp_Moving_average_{s}_std'] = \
+                (ewma(x, span=s).mean(skipna=True)).std(skipna=True)
+            feature_dict[f'exp_Moving_std_{s}_mean'] = \
+                (ewma(x, span=s).std(skipna=True)).mean(skipna=True)
+            feature_dict[f'exp_Moving_std_{s}_std'] = \
+                (ewma(x, span=s).std(skipna=True)).std(skipna=True)
 
         feature_dict['iqr'] = np.subtract(*np.percentile(x, [75, 25]))
         feature_dict['iqr1'] = np.subtract(*np.percentile(x, [95, 5]))
         feature_dict['ave10'] = stats.trim_mean(x, 0.1)
 
-        for slice_length, threshold in product([50000, 100000, 150000],
-                                               [5, 10, 20, 50, 100]):
-            feature_dict[f'count_big_{slice_length}_threshold_{threshold}'] = (
-                        np.abs(x[-slice_length:]) > threshold).sum()
-            feature_dict[f'count_big_{slice_length}_less_threshold_{threshold}'] = (
-                        np.abs(x[-slice_length:]) < threshold).sum()
+        for slice_length, threshold in product(
+                [50000, 100000, 150000], [5, 10, 20, 50, 100]):
+            feature_dict[f'count_big_{slice_length}_threshold_{threshold}'] = \
+                (np.abs(x[-slice_length:]) > threshold).sum()
+            feature_dict[f'count_big_{slice_length}_less_threshold_{threshold}'] = \
+                (np.abs(x[-slice_length:]) < threshold).sum()
 
-        feature_dict['range_minf_m4000'] = feature_calculators.range_count(x, -np.inf, -4000)
-        feature_dict['range_p4000_pinf'] = feature_calculators.range_count(x, 4000, np.inf)
+        feature_dict['range_minf_m4000'] = \
+            feature_calculators.range_count(x, -np.inf, -4000)
+        feature_dict['range_p4000_pinf'] = \
+            feature_calculators.range_count(x, 4000, np.inf)
 
         for i, j in zip(borders, borders[1:]):
             feature_dict[f'range_{i}_{j}'] = feature_calculators.range_count(x, i, j)
 
         for autocorr_lag in autocorr_lags:
-            feature_dict[f'autocorrelation_{autocorr_lag}'] = feature_calculators.autocorrelation(x, autocorr_lag)
-            feature_dict[f'c3_{autocorr_lag}'] = feature_calculators.c3(x, autocorr_lag)
+            feature_dict[f'autocorrelation_{autocorr_lag}'] = \
+                feature_calculators.autocorrelation(x, autocorr_lag)
+            feature_dict[f'c3_{autocorr_lag}'] = \
+                feature_calculators.c3(x, autocorr_lag)
 
         for p in percentiles:
-            feature_dict[f'binned_entropy_{p}'] = feature_calculators.binned_entropy(x, p)
+            feature_dict[f'binned_entropy_{p}'] = \
+                feature_calculators.binned_entropy(x, p)
 
-        feature_dict['num_crossing_0'] = feature_calculators.number_crossing_m(x, 0)
+        feature_dict['num_crossing_0'] = \
+            feature_calculators.number_crossing_m(x, 0)
 
         for peak in peaks:
             feature_dict[f'num_peaks_{peak}'] = feature_calculators.number_peaks(x, peak)
 
         for c in coefs:
             feature_dict[f'spkt_welch_density_{c}'] = \
-            list(feature_calculators.spkt_welch_density(x, [{'coeff': c}]))[0][1]
-            feature_dict[f'time_rev_asym_stat_{c}'] = feature_calculators.time_reversal_asymmetry_statistic(x, c)
+                list(feature_calculators.spkt_welch_density(x, [{'coeff': c}]))[0][1]
+            feature_dict[f'time_rev_asym_stat_{c}'] = \
+                feature_calculators.time_reversal_asymmetry_statistic(x, c)
 
         for w in windows:
             x_roll_std = x.rolling(w).std().dropna().values
@@ -237,12 +283,15 @@ class FeatureGenerator(object):
             feature_dict[f'min_roll_std_{w}'] = x_roll_std.min()
 
             for p in percentiles:
-                feature_dict[f'percentile_roll_std_{p}_window_{w}'] = np.percentile(x_roll_std, p)
+                feature_dict[f'percentile_roll_std_{p}_window_{w}'] = \
+                    np.percentile(x_roll_std, p)
 
-            feature_dict[f'av_change_abs_roll_std_{w}'] = np.mean(np.diff(x_roll_std))
-            feature_dict[f'av_change_rate_roll_std_{w}'] = np.mean(
-                np.nonzero((np.diff(x_roll_std) / x_roll_std[:-1]))[0])
-            feature_dict[f'abs_max_roll_std_{w}'] = np.abs(x_roll_std).max()
+            feature_dict[f'av_change_abs_roll_std_{w}'] = \
+                np.mean(np.diff(x_roll_std))
+            feature_dict[f'av_change_rate_roll_std_{w}'] = \
+                np.mean(np.nonzero((np.diff(x_roll_std) / x_roll_std[:-1]))[0])
+            feature_dict[f'abs_max_roll_std_{w}'] = \
+                np.abs(x_roll_std).max()
 
             feature_dict[f'ave_roll_mean_{w}'] = x_roll_mean.mean()
             feature_dict[f'std_roll_mean_{w}'] = x_roll_mean.std()
@@ -250,12 +299,15 @@ class FeatureGenerator(object):
             feature_dict[f'min_roll_mean_{w}'] = x_roll_mean.min()
 
             for p in percentiles:
-                feature_dict[f'percentile_roll_mean_{p}_window_{w}'] = np.percentile(x_roll_mean, p)
+                feature_dict[f'percentile_roll_mean_{p}_window_{w}'] = \
+                    np.percentile(x_roll_mean, p)
 
-            feature_dict[f'av_change_abs_roll_mean_{w}'] = np.mean(np.diff(x_roll_mean))
-            feature_dict[f'av_change_rate_roll_mean_{w}'] = np.mean(
-                np.nonzero((np.diff(x_roll_mean) / x_roll_mean[:-1]))[0])
-            feature_dict[f'abs_max_roll_mean_{w}'] = np.abs(x_roll_mean).max()
+            feature_dict[f'av_change_abs_roll_mean_{w}'] = \
+                np.mean(np.diff(x_roll_mean))
+            feature_dict[f'av_change_rate_roll_mean_{w}'] = \
+                np.mean(np.nonzero((np.diff(x_roll_mean) / x_roll_mean[:-1]))[0])
+            feature_dict[f'abs_max_roll_mean_{w}'] = \
+                np.abs(x_roll_mean).max()
 
         # Mel-frequency cepstral coefficients (MFCCs)
         x = x.values.astype('float32')
@@ -264,11 +316,16 @@ class FeatureGenerator(object):
             feature_dict[f'mfcc_{i}_avg'] = np.mean(np.abs(mfcc[i]))
 
         # spectral features
-        feature_dict['spectral_centroid'] = np.mean(np.abs(librosa.feature.spectral_centroid(y=x)[0]))
-        feature_dict['zero_crossing_rate'] = np.mean(np.abs(librosa.feature.zero_crossing_rate(y=x)[0]))
-        feature_dict['spectral_flatness'] = np.mean(np.abs(librosa.feature.spectral_flatness(y=x)[0]))
-        feature_dict['spectral_contrast'] = np.mean(np.abs(librosa.feature.spectral_contrast(S=np.abs(librosa.stft(x)))[0]))
-        feature_dict['spectral_bandwidth'] = np.mean(np.abs(librosa.feature.spectral_bandwidth(y=x)[0]))
+        feature_dict['spectral_centroid'] = \
+            np.mean(np.abs(librosa.feature.spectral_centroid(y=x)[0]))
+        feature_dict['zero_crossing_rate'] = \
+            np.mean(np.abs(librosa.feature.zero_crossing_rate(y=x)[0]))
+        feature_dict['spectral_flatness'] = \
+            np.mean(np.abs(librosa.feature.spectral_flatness(y=x)[0]))
+        feature_dict['spectral_contrast'] = \
+            np.mean(np.abs(librosa.feature.spectral_contrast(S=np.abs(librosa.stft(x)))[0]))
+        feature_dict['spectral_bandwidth'] = \
+            np.mean(np.abs(librosa.feature.spectral_bandwidth(y=x)[0]))
 
         return feature_dict
 

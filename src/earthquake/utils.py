@@ -1,8 +1,3 @@
-# -*- coding: utf-8 -*-
-
-"""various utils
-"""
-
 import logging
 
 import numpy as np
@@ -13,17 +8,9 @@ from sklearn.ensemble import RandomForestRegressor
 logger = logging.getLogger('earthquake')
 
 
-def feature_importance(x, y, **kwargs):
+def feature_importance(x, y, n_best=None, n_jobs=1):
     """Calculate and display features importance
-
-    :param x: features set
-    :param y: target
-    :keyword n_best: number of displayed features, show all if None
-    :keyword n_jobs: number of parallel jobs
-    :return: list of n_best most important features
     """
-    n_best = kwargs.get('n_best', None)
-    n_jobs = kwargs.get('n_jobs', 1)
 
     best_features = []
 
@@ -52,6 +39,7 @@ def feature_importance(x, y, **kwargs):
 def read_csv(path_to_csv):
     """Read .csv file and fill missing values
     """
+
     data = pd.read_csv(path_to_csv)
     data = data.replace([np.inf, -np.inf], np.nan)
     data.fillna(method='bfill', inplace=True)

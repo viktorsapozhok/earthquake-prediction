@@ -1,10 +1,11 @@
-deap
 joblib
-librosa
 numpy
 pandas
 scipy
 sklearn
-tables
 tqdm
-tsfresh
+catboost==0.15
+deap==1.2.2
+librosa===0.6.3
+tables==3.5.1
+tsfresh==0.11.2
