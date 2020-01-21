@@ -20,7 +20,7 @@ logger = config.setup_logger()
 
 
 class Chromosome(object):
-    """Chromosome builder.
+    """Implements a chromosome container.
 
     Chromosome represents the list of genes, whereas each gene is
     the name of feature. Creating the chromosome, we generate
