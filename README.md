@@ -36,7 +36,7 @@ First, clone the repository and install it from setup file:
     $ pip install --editable .
 ```
     
-Make sure that .csv files have been downloaded correctly. To start the genetic algorithm
+Make sure, that .csv files have been downloaded correctly. To start the genetic algorithm
 implementing feature selection, launch `ga.py` script from project's root directory:
 
 ```
