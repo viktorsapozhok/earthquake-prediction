@@ -13,20 +13,36 @@ trained the model using CatboostRegressor with default parameters.
     .
     ├── ...
     ├── data                    
-    |   ├── train.csv           # Original training set decomposed into feature set
-    |   ├── test.csv            # Testing signal decomposed into feature set
-    |   └── results.csv         # Modeling results prepared for submission
+        ├── train.csv           # Original training set decomposed into feature set
+        ├── test.csv            # Testing signal decomposed into feature set
+        └── results.csv         # Modeling results prepared for submission
     │── notebooks
         └── earthquake.ipynb    # Misc
-    │── src        
-        ├── earthquake
-            ├── ga.py           # GA for feature selection
-            ├── generator.py    # Feature engineering
-            ├── submission.py   # Make prediction and prepare file for submission
-            └── utils.py        # Helpers
-    ├── config.py               # Configuration parameters    
+    ├── earthquake
+        ├── config.py           # Configuration parameters    
+        ├── ga.py               # GA for feature selection
+        ├── generator.py        # Feature engineering
+        ├── submission.py       # Make prediction and prepare file for submission
+        └── utils.py            # Helpers
     └── ...
+
+### How to run
+
+First, clone the repository and install it from setup file:
+
+```
+    $ git clone https://github.com/viktorsapozhok/earthquake-prediction.git
+    $ cd earthquake-prediction
+    $ pip install --editable .
+```
     
+Make sure that .csv files have been downloaded correctly. To start the genetic algorithm
+implementing feature selection, launch `ga.py` script from project's root directory:
+
+```
+    $ python earthquake/ga.py
+```
+
 ### Feature engineering
 
 The initial acoustic signal is decomposed into segments with 150000 rows per segment, 

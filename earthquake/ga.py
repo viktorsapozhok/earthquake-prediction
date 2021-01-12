@@ -1,5 +1,3 @@
-"""Feature selection based on genetic algorithm
-"""
 from operator import attrgetter
 import random
 
@@ -13,8 +11,7 @@ from deap import (
 import numpy as np
 from sklearn.model_selection import cross_val_score
 
-from src.earthquake import utils
-import config
+from earthquake import config, utils
 
 logger = config.setup_logger()
 

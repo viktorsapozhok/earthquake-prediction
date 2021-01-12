@@ -9,7 +9,7 @@ logger = logging.getLogger('earthquake')
 
 
 def feature_importance(x, y, n_best=None, n_jobs=1):
-    """Calculate and display features importance
+    """Calculate and display features importance.
     """
 
     best_features = []
@@ -37,7 +37,7 @@ def feature_importance(x, y, n_best=None, n_jobs=1):
 
 
 def read_csv(path_to_csv):
-    """Read .csv file and fill missing values
+    """Read .csv file and fill missing values.
     """
 
     data = pd.read_csv(path_to_csv)

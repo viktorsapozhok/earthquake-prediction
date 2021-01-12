@@ -1,7 +1,7 @@
 import logging
 import os
 
-root_dir = os.path.dirname(os.path.abspath(__file__))
+root_dir = os.path.dirname(os.path.abspath(os.path.join(__file__, '..')))
 
 # path to raw training set
 path_to_train_store = os.path.join(root_dir, 'data', 'train.hdf')
@@ -32,7 +32,7 @@ n_features = 15
 
 
 def setup_logger():
-    """Configure logger
+    """Configure logger.
     """
 
     logging.basicConfig(

@@ -1,5 +1,3 @@
-"""Feature engineering
-"""
 import argparse
 from itertools import product
 import warnings
@@ -13,12 +11,15 @@ from sklearn.linear_model import LinearRegression
 from tqdm import tqdm
 from tsfresh.feature_extraction import feature_calculators
 
-import config
+from earthquake import config
 
 warnings.filterwarnings("ignore")
 
 
 class FeatureGenerator(object):
+    """Feature engineering.
+    """
+
     def __init__(
             self,
             path_to_store,

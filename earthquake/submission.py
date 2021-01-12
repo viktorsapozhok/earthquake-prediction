@@ -1,9 +1,7 @@
-"""Make prediction and prepare results for submission
-"""
 from catboost import CatBoostRegressor
 import pandas as pd
 
-import config
+from earthquake import config
 
 
 def get_features():
@@ -27,6 +25,9 @@ def get_features():
 
 
 def submit():
+    """Make prediction and prepare results for submission.
+    """
+
     features = get_features()
 
     train_set = pd.read_csv(config.path_to_train)
