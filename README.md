@@ -26,6 +26,8 @@ trained the model using CatboostRegressor with default parameters.
         └── utils.py            # Helpers
     └── ...
 
+Note, that train and test sets in `data` directory contain only 200 of 1496 features to reduce the file size.
+
 ### How to run
 
 First, clone the repository and install it from setup file:
@@ -36,8 +38,7 @@ First, clone the repository and install it from setup file:
     $ pip install --editable .
 ```
     
-Make sure, that .csv files have been downloaded correctly. To start the genetic algorithm
-implementing feature selection, launch `ga.py` script from project's root directory:
+To start the genetic algorithm implementing feature selection, launch `ga.py` script from project's root directory:
 
 ```
     $ python earthquake/ga.py
@@ -57,8 +58,7 @@ Before we start with the feature selection, we calculate feature importance as i
 [here](https://explained.ai/rf-importance/index.html) and train the baseline model on the 15 most important features.
 
 ```python
-from src.earthquake import utils
-import config
+from earthquake import config, utils
 
 # load training set
 data = utils.read_csv(config.path_to_train)
@@ -118,31 +118,93 @@ total: 2.064
 
 ### Feature selection
 
-To avoid potential overfitting, we employ genetic algorithm for feature selection. The genetic context is pretty straightforward.
+To avoid a potential overfitting, we employ a genetic algorithm for feature selection. The genetic context is pretty straightforward.
 We suppose that the list of features (without duplicates) is the chromosome, whereas each gene represents one feature.
-`n_features` is the input parameter controlling the amount of genes in chromosome. 
+`n_features` is the input parameter controlling the amount of genes in the chromosome. 
+
+```python
+genes = [
+    column for column in train.columns
+    if column not in ['target', 'seg_id']
+]
+```
+
 We generate the population with 50 chromosomes, where each gene is generated as a random choice from initial list of features (1496 features).
 To accelerate the performance, we also add to population the feature set used in the baseline model.   
 
+```python
+import random
+from deap import base, creator
+
+class Chromosome(object):
+    """Chromosome represents the list of genes, whereas each gene is
+    the feature name. Creating the chromosome, we generate
+    the random sample of features.
+    """
+
+    def __init__(self, genes, size):
+        self.genes = self.generate(genes, size)
+
+    @staticmethod
+    def generate(genes, size):
+        return random.sample(genes, size)
+
+# setting individual creator
+creator.create('FitnessMin', base.Fitness, weights=(-1,))
+creator.create('Individual', Chromosome, fitness=creator.FitnessMin)
+```
+
 Standard two-point crossover operator is used for crossing two chromosomes. 
-To implement a mutation, we firstly generate a random amount of genes (> 1), which needs to be mutated, and then
-mutate these genes so that the chromosome doesn't contain two equal genes. 
+To implement a mutation, we first generate a random amount of genes (> 1), which needs to be mutated, and then
+mutate these genes in order that the chromosome doesn't contain two equal genes. 
+
+Note, that mutation operator must return a tuple.
+
+```python
+import random
+
+def mutate(individual, genes=None, pb=0):
+    # maximal amount of mutated genes
+    n_mutated_max = max(1, int(len(individual) * pb))
+    # generate the random amount of mutated genes
+    n_mutated = random.randint(1, n_mutated_max)
+    # select random genes which need to be mutated
+    mutated_indexes = random.sample(
+        [index for index in range(len(individual.genes))], n_mutated)
+    # mutation
+    for index in mutated_indexes:
+        individual[index] = random.choice(genes)
+    # must return a tuple
+    return individual,
+```
 
 For fitness evaluation we use lightened version of CatboostRegressor with decreased number of iterations and 
 increased learning rate.  
 
 ```python
+from catboost import CatBoostRegressor
 model = CatBoostRegressor(iterations=60, learning_rate=0.2, random_seed=0, verbose=False)
 ```
 
-We set `cxpb=0.2` the probability that offspring is produced by crossover, and `mutpb=0.8` probability that offspring is produced by mutation. 
-Mutation probability is intentionally increased to prevent a high occurrence of identical chromosomes produced by crossover.   
+We set `cxpb=0.2`, the probability that offspring is produced by the crossover, and `mutpb=0.8`, 
+probability that offspring is produced by mutation. Mutation probability is intentionally increased 
+to prevent a high occurrence of identical chromosomes produced by the crossover.   
+
+Finally, running `eaMuPlusLambda` evolutionary algorithm we get the best chromosome represented
+the list of 15 best features.
 
 ```python
 from deap import algorithms
 
-algorithms.eaMuPlusLambda(pop, toolbox, 
-    mu=10, lambda_=30, cxpb=0.2, mutpb=0.8, ngen=50, stats=stats, halloffame=hof, verbose=True)
+# mu: the number of individuals to select for the next generation
+# lambda: the number of children to produce at each generation
+# cxpb: the probability that offspring is produced by crossover
+# mutpb: the probability that offspring is produced by mutation
+# ngen: the number of generations
+algorithms.eaMuPlusLambda(
+    pop, toolbox,
+    mu=10, lambda_=30, cxpb=0.2, mutpb=0.8,
+    ngen=50, stats=stats, halloffame=hof, verbose=True)
 ```
 
 Here is the list of 15 features accumulated in the best chromosome after 50 generations.

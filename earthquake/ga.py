@@ -2,12 +2,7 @@ from operator import attrgetter
 import random
 
 from catboost import CatBoostRegressor
-from deap import (
-    algorithms,
-    base,
-    creator,
-    tools
-)
+from deap import algorithms, base, creator, tools
 import numpy as np
 from sklearn.model_selection import cross_val_score
 
@@ -225,4 +220,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
