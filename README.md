@@ -190,7 +190,7 @@ We set `cxpb=0.2`, the probability that offspring is produced by the crossover, 
 probability that offspring is produced by mutation. Mutation probability is intentionally increased 
 to prevent a high occurrence of identical chromosomes produced by the crossover.   
 
-Finally, running `eaMuPlusLambda` evolutionary algorithm we get the best chromosome represented
+Finally, after running `eaMuPlusLambda` evolutionary algorithm, we get the best chromosome representing
 the list of 15 best features.
 
 ```python
