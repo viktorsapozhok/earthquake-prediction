@@ -191,25 +191,31 @@ toolbox.register('mutate', mutate, genes=genes, pb=0.2)
 ```
 
 For fitness evaluation we use lightened version of CatboostRegressor with decreased number of iterations and 
-increased learning rate.  
+increased learning rate. Note, that fitness evaluator must also return a tuple. 
 
 ```python
 from catboost import CatBoostRegressor
-model = CatBoostRegressor(iterations=60, learning_rate=0.2, random_seed=0, verbose=False)
+from sklearn.model_selection import cross_val_score
 
-# register fitness evaluator
+model = CatBoostRegressor(
+    iterations=60, learning_rate=0.2, random_seed=0, verbose=False)
+
+def evaluate(individual, model=None, train=None, n_splits=5):
+    mae_folds = cross_val_score(
+        model, 
+        train[individual.genes], 
+        train['target'], 
+        cv=n_splits, 
+        scoring='neg_mean_absolute_error')
+    return abs(mae_folds.mean()),
+
 toolbox.register(
-    'evaluate', evaluate,
-    model=model, train=train, n_splits=5, n_jobs=n_jobs)
+    'evaluate', evaluate, model=model, train=train, n_splits=5)
 ```
-
-We set `cxpb=0.2`, the probability that offspring is produced by the crossover, and `mutpb=0.8`, 
-probability that offspring is produced by mutation. Mutation probability is intentionally increased 
-to prevent a high occurrence of identical chromosomes produced by the crossover.   
 
 We register elitism operator to select best individuals to the next generation. The amount of the best 
 individuals is controlling by the parameter `mu` in the algorithm. To prevent populations with many
-duplicate individuals we overwrite the standard `selBest` operator.
+duplicate individuals, we overwrite the standard `selBest` operator.
 
 ```python
 from operator import attrgetter
@@ -227,6 +233,10 @@ hof = tools.HallOfFame(5)
 ```
 
 Finally, we put everything together and launch `eaMuPlusLambda` evolutionary algorithm. 
+Here we set `cxpb=0.2`, the probability that offspring is produced by the crossover, and `mutpb=0.8`, 
+the probability that offspring is produced by mutation. Mutation probability is intentionally increased 
+to prevent a high occurrence of identical chromosomes produced by the crossover.   
+
 As a result, we get the list of 15 best features selected into the model.
 
 ```python
