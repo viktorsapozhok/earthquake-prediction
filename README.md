@@ -123,46 +123,57 @@ We suppose that the list of features (without duplicates) is the chromosome, whe
 `n_features` is the input parameter controlling the amount of genes in the chromosome. 
 
 ```python
-genes = [
-    column for column in train.columns
-    if column not in ['target', 'seg_id']
-]
+import random
+
+class Chromosome(object):
+    def __init__(self, genes, size):
+        self.genes = random.sample(genes, size)
 ```
 
 We generate the population with 50 chromosomes, where each gene is generated as a random choice from initial list of features (1496 features).
 To accelerate the performance, we also add to population the feature set used in the baseline model.   
 
 ```python
-import random
-from deap import base, creator
+from deap import base, creator, tools
+    
 
-class Chromosome(object):
-    """Chromosome represents the list of genes, whereas each gene is
-    the feature name. Creating the chromosome, we generate
-    the random sample of features.
-    """
+def init_individual(ind_class, genes=None, size=None):
+    return ind_class(genes, size)    
+    
 
-    def __init__(self, genes, size):
-        self.genes = self.generate(genes, size)
-
-    @staticmethod
-    def generate(genes, size):
-        return random.sample(genes, size)
+genes = [
+    column for column in train.columns
+    if column not in ['target', 'seg_id']
+]
 
 # setting individual creator
 creator.create('FitnessMin', base.Fitness, weights=(-1,))
 creator.create('Individual', Chromosome, fitness=creator.FitnessMin)
+
+# register callbacks
+toolbox = base.Toolbox()
+toolbox.register(
+    'individual', init_individual, creator.Individual,
+    genes=genes, size=n_features)
+toolbox.register(
+    'population', tools.initRepeat, list, toolbox.individual)
+
+# raise population
+pop = toolbox.population(50)
 ```
 
 Standard two-point crossover operator is used for crossing two chromosomes. 
+
+```python
+toolbox.register('mate', tools.cxTwoPoint)
+```
+
 To implement a mutation, we first generate a random amount of genes (> 1), which needs to be mutated, and then
 mutate these genes in order that the chromosome doesn't contain two equal genes. 
 
 Note, that mutation operator must return a tuple.
 
 ```python
-import random
-
 def mutate(individual, genes=None, pb=0):
     # maximal amount of mutated genes
     n_mutated_max = max(1, int(len(individual) * pb))
@@ -174,8 +185,9 @@ def mutate(individual, genes=None, pb=0):
     # mutation
     for index in mutated_indexes:
         individual[index] = random.choice(genes)
-    # must return a tuple
     return individual,
+
+toolbox.register('mutate', mutate, genes=genes, pb=0.2)
 ```
 
 For fitness evaluation we use lightened version of CatboostRegressor with decreased number of iterations and 
@@ -184,14 +196,38 @@ increased learning rate.
 ```python
 from catboost import CatBoostRegressor
 model = CatBoostRegressor(iterations=60, learning_rate=0.2, random_seed=0, verbose=False)
+
+# register fitness evaluator
+toolbox.register(
+    'evaluate', evaluate,
+    model=model, train=train, n_splits=5, n_jobs=n_jobs)
 ```
 
 We set `cxpb=0.2`, the probability that offspring is produced by the crossover, and `mutpb=0.8`, 
 probability that offspring is produced by mutation. Mutation probability is intentionally increased 
 to prevent a high occurrence of identical chromosomes produced by the crossover.   
 
-Finally, after running `eaMuPlusLambda` evolutionary algorithm, we get the best chromosome representing
-the list of 15 best features.
+We register elitism operator to select best individuals to the next generation. The amount of the best 
+individuals is controlling by the parameter `mu` in the algorithm. To prevent populations with many
+duplicate individuals we overwrite the standard `selBest` operator.
+
+```python
+from operator import attrgetter
+
+def select_best(individuals, k, fit_attr='fitness'):
+    return sorted(set(individuals), key=attrgetter(fit_attr), reverse=True)[:k]
+
+toolbox.register('select', select_best)
+```
+
+To keep track of the best individuals, we introduce a hall of fame container.
+
+```python
+hof = tools.HallOfFame(5)
+```
+
+Finally, we put everything together and launch `eaMuPlusLambda` evolutionary algorithm. 
+As a result, we get the list of 15 best features selected into the model.
 
 ```python
 from deap import algorithms
