@@ -5,8 +5,7 @@ This repository presents an approach used for solving [Kaggle LANL Earthquake Pr
 For feature engineering we used [this kernel][3], slightly modified for adding some spectral features. 
 The initial training set `/data/train.csv` contains 4194 rows (one row for each segment) and 1496 columns (features).
 We applied genetic algorithm with CatboostRegressor for fitness evaluation to implement a feature selection. 
-Based on the GA's results, we selected [15 features](https://github.com/viktorsapozhok/earthquake-prediction/blob/master/src/earthquake/submission.py) and
-trained the model using CatboostRegressor with default parameters.
+Based on the GA's results, we selected 15 features and trained the model using CatboostRegressor with default parameters.
 
 ### Project structure
 
@@ -286,10 +285,8 @@ The observed results are used for submission.
 
 `Cross-validation MAE`: 2.048, `public score`: 1.509, `private score`: 2.425 (31 place). 
    
-### Reference
-
-[1] https://www.kaggle.com/c/LANL-Earthquake-Prediction/overview/description "Kaggle LANL Earthquake Prediction Challenge"
-[2] https://viktorsapozhok.github.io/deap-genetic-algorithm/ "Feature selection using genetic algorithm provided by DEAP package"
-[3] https://www.kaggle.com/artgor/even-more-features "Feature engineering"
-[4] https://www.kaggle.com/gpreda/lanl-earthquake-eda-and-prediction "LANL Earthquake EDA and Prediction"
-[5] https://explained.ai/rf-importance/index.html "Beware Default Random Forest Importances"
+[1]: https://www.kaggle.com/c/LANL-Earthquake-Prediction/overview/description "Kaggle LANL Earthquake Prediction Challenge"
+[2]: https://viktorsapozhok.github.io/deap-genetic-algorithm/ "Feature selection using genetic algorithm provided by DEAP package"
+[3]: https://www.kaggle.com/artgor/even-more-features "Feature engineering"
+[4]: https://www.kaggle.com/gpreda/lanl-earthquake-eda-and-prediction "LANL Earthquake EDA and Prediction"
+[5]: https://explained.ai/rf-importance/index.html "Beware Default Random Forest Importances"
